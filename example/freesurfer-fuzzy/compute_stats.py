@@ -11,11 +11,11 @@ from fsgd_parser import FSGDParser
 from scipy.stats import mannwhitneyu, ttest_ind
 from significantdigits import significant_digits as sigdig
 
-simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
-
 from icecream import ic
 
 ic.configureOutput(includeContext=True)
+
+simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 
 
 units = {
@@ -121,7 +121,7 @@ def get_files(directory, measure_to_parse=None):
     files = glob.glob(os.path.join(directory, "rep*.tsv"))
     files_sorted = {}
     for file in files:
-        (_, hemi, measure) = file.split("-")
+        (_, hemi, measure) = os.path.split(file)[-1].split("-")
         measure = os.path.splitext(measure)[0]
         key = (hemi, measure)
         if measure_to_parse is None or measure_to_parse == measure:
@@ -144,11 +144,15 @@ def compute_sigdig(dtype, clip=True):
     return fun
 
 
-def compute_stats(lh, rh, dtype):
+def compute_stats(lh, rh, dtype, stats_type="sig"):
     stats_name_l = lh.columns[0]
     stats_name_r = rh.columns[0]
-    stats_l = lh.groupby(stats_name_l).agg(compute_sigdig(dtype)).transpose()
-    stats_r = rh.groupby(stats_name_r).agg(compute_sigdig(dtype)).transpose()
+    if stats_type == "sig":
+        stats_l = lh.groupby(stats_name_l).agg(compute_sigdig(dtype)).transpose()
+        stats_r = rh.groupby(stats_name_r).agg(compute_sigdig(dtype)).transpose()
+    elif stats_type == "std":
+        stats_l = lh.groupby(stats_name_l).agg("std").transpose()
+        stats_r = rh.groupby(stats_name_r).agg("std").transpose()
     stats = pd.concat((stats_l, stats_r))
     stats.drop(["BrainSegVolNotVent", "eTIV"], inplace=True)
     stats["hemi"] = stats.index.to_series().apply(lambda s: s.split("_")[0])
@@ -216,7 +220,7 @@ def qqplot(pvalues, title, output):
     fig.update_yaxes(title="p-values")
     fig.update_layout(title=title)
     fig.write_html(f"qqplot-{output}.html")
-    fig.write_image(f"qqplot-{output}.png")
+    fig.write_image(f"qqplot-{output}.png", width=1920, height=1080)
 
 
 def test_statistical_difference_hemi(stats):
@@ -292,7 +296,11 @@ def test_statistical_difference(stats):
 
 
 def compute_stats_group(
-    lh: pd.DataFrame, rh: pd.DataFrame, dtype: np.dtype, fsgd: pd.DataFrame
+    lh: pd.DataFrame,
+    rh: pd.DataFrame,
+    dtype: np.dtype,
+    fsgd: pd.DataFrame,
+    stats_type: str,
 ):
     fsgd["age"] = pd.to_numeric(fsgd["age"])
 
@@ -301,9 +309,15 @@ def compute_stats_group(
 
     stats = pd.concat([lh, rh])
 
-    stats = stats.groupby(["subjid", "parcellation", "hemi", "PD-status"])[
-        ["thickness"]
-    ].agg(compute_sigdig(dtype))
+    if stats_type == "sig":
+        stats = stats.groupby(["subjid", "parcellation", "hemi", "PD-status"])[
+            ["thickness"]
+        ].agg(compute_sigdig(dtype))
+    elif stats_type == "std":
+        stats = stats.groupby(["subjid", "parcellation", "hemi", "PD-status"])[
+            ["thickness"]
+        ].std()
+
     stats.reset_index(inplace=True)
 
     test_statistical_difference_hemi(stats)
@@ -311,84 +325,122 @@ def compute_stats_group(
     return stats
 
 
-def compute_stats_volume(lh, rh, cortical, dtype):
-    hemi_stats = compute_stats(lh, rh, dtype)
+def compute_stats_volume(lh, rh, cortical, dtype, stats_type):
+    hemi_stats = compute_stats(lh, rh, dtype, stats_type=stats_type)
     stats_name = cortical.columns[0]
-    volume_stats = cortical.groupby(stats_name).agg(compute_sigdig(dtype))
+    if stats_type == "sig":
+        volume_stats = cortical.groupby(stats_name).agg(compute_sigdig(dtype))
+    elif stats_type == "std":
+        volume_stats = cortical.groupby(stats_name).std()
     return hemi_stats, volume_stats
 
 
-def compute_stats_volume_group(lh, rh, cortical, dtype, fsgd):
-    hemi_stats = compute_stats_group(lh, rh, dtype, fsgd)
+def compute_stats_volume_group(lh, rh, cortical, dtype, fsgd, stats_type):
+    hemi_stats = compute_stats_group(lh, rh, dtype, fsgd, stats_type=stats_type)
     volume = preprocess_volume_group(fsgd, cortical)
 
     fsgd["age"] = pd.to_numeric(fsgd["age"])
 
-    volume_stats = volume.groupby(["subjid", "parcellation", "PD-status"])[
-        ["thickness"]
-    ].agg(compute_sigdig(dtype))
-    volume_stats.reset_index(inplace=True)
+    if stats_type == "sig":
+        volume_stats = volume.groupby(["subjid", "parcellation", "PD-status"])[
+            ["thickness"]
+        ].agg(compute_sigdig(dtype))
+    elif stats_type == "std":
+        volume_stats = volume.groupby(["subjid", "parcellation", "PD-status"])[
+            ["thickness"]
+        ].std()
 
+    volume_stats.reset_index(inplace=True)
     test_statistical_difference_hemi(hemi_stats)
     test_statistical_difference(volume_stats)
 
     return hemi_stats, volume_stats
 
 
-def plot_hemi(df, title, show):
-    fig = px.box(
-        df,
-        x=df.index,
-        y=df.columns,
-        color="hemi",
-    )
+def plot_hemi(
+    df,
+    title,
+    show,
+    output,
+    log_y,
+    xaxis="Cortical parcellation",
+    yaxis="Significant digits",
+):
+    fig = px.box(df, x=df.index, y=df.columns, color="hemi", log_y=log_y)
     fig.update_layout(title=title)
-    fig.update_xaxes(title="Cortical Parcellation")
-    fig.update_yaxes(title="Significant digits (mm)")
+    fig.update_xaxes(title=xaxis)
+    fig.update_yaxes(title=yaxis)
     if show:
         fig.show()
-    fig.write_html(f"{title}.html")
-    fig.write_image(f"{title}.png")
+    fig.write_html(f"{output}.html")
+    fig.write_image(f"{output}.png", width=1920, height=1080)
 
 
-def plot_hemi_group(df, title, show):
+def plot_hemi_group(
+    df,
+    title,
+    show,
+    output,
+    log_y,
+    xaxis="Cortical parcellation",
+    yaxis="Significant digits",
+):
     fig = px.box(
         df,
         x="parcellation",
         y="thickness",
         color="hemi",
         facet_row="PD-status",
+        log_y=log_y,
     )
     fig.update_layout(title=title)
-    fig.update_xaxes(title="Cortical Parcellation")
-    fig.update_yaxes(title="Significant digits (mm)")
+    fig.update_xaxes(title=xaxis)
+    fig.update_yaxes(title=yaxis)
     if show:
         fig.show()
-    fig.write_html(title)
-    fig.write_image(title, format="png")
+    fig.write_html(f"{output}.html")
+    fig.write_image(f"{output}.png", width=1920, height=1080)
 
 
-def plot_cortical_volume(df, title, show):
+def plot_cortical_volume(
+    df,
+    title,
+    show,
+    output,
+    log_y,
+    xaxis="Cortical parcellation",
+    yaxis="Significant digits",
+):
     df.drop(columns=volume_units["unitless"], inplace=True)
-    fig = px.box(df, y=df.columns)
+    fig = px.box(df, y=df.columns, log_y=log_y)
     fig.update_layout(title=title)
-    fig.update_xaxes(title="Cortical Parcellation")
-    fig.update_yaxes(title="Volume (mm^3)")
+    fig.update_xaxes(title=xaxis)
+    fig.update_yaxes(title=yaxis)
     if show:
         fig.show()
-    fig.write_html(f"{title}.html")
-    fig.write_image(f"{title}.png")
+    fig.write_html(f"{output}.html")
+    fig.write_image(f"{output}.png", width=1920, height=1080)
 
 
-def plot_cortical_volume_group(df, title, show):
-    fig = px.box(df, x="parcellation", y="thickness", facet_col="PD-status")
+def plot_cortical_volume_group(
+    df,
+    title,
+    show,
+    output,
+    log_y,
+    xaxis="Cortical parcellation",
+    yaxis="Significant digits",
+):
+    fig = px.box(
+        df, x="parcellation", y="thickness", facet_col="PD-status", log_y=log_y
+    )
     fig.update_layout(title=title)
-    fig.update_xaxes(title="Cortical Parcellation")
-    fig.update_yaxes(title="Volume (mm^3)")
+    fig.update_xaxes(title=xaxis)
+    fig.update_yaxes(title=yaxis)
     if show:
         fig.show()
-    fig.write_html(f"{title}-group.html")
-    fig.write_image(f"{title}-group.png")
+    fig.write_html(f"{output}.html")
+    fig.write_image(f"{output}.png", width=1920, height=1080)
 
 
 def make_df(files_dict):
@@ -402,28 +454,79 @@ def make_df(files_dict):
 def plot_subject(args, df):
     for measure, df_dict in df.items():
         df_dict["dtype"] = fptypes[args.fp_type]
-
+        df_dict["stats_type"] = args.stats_type
+        title = args.title if args.title else measure
         if "cortical" in df_dict:
             hemi_stats, volume_stats = compute_stats_volume(**df_dict)
-            plot_hemi(hemi_stats, title=measure, show=args.show)
-            plot_cortical_volume(volume_stats, title=measure, show=args.show)
+            plot_hemi(
+                hemi_stats,
+                title=title,
+                show=args.show,
+                output=args.output + "-hemi-subject",
+                xaxis=args.xaxis,
+                yaxis=args.yaxis,
+                log_y=args.log_yaxis,
+            )
+            plot_cortical_volume(
+                volume_stats,
+                title=title,
+                show=args.show,
+                output=args.output + "-subject",
+                xaxis=args.xaxis,
+                yaxis=args.yaxis,
+                log_y=args.log_yaxis,
+            )
         else:
             hemi_stats = compute_stats(**df_dict)
-            plot_hemi(hemi_stats, title=measure, show=args.show)
+            plot_hemi(
+                hemi_stats,
+                title=title,
+                show=args.show,
+                output=args.output + "-subject",
+                xaxis=args.xaxis,
+                yaxis=args.yaxis,
+                log_y=args.log_yaxis,
+            )
 
 
 def plot_group(args, df):
     fsgd = get_fsgd(args.fsgd)
     for measure, df_dict in df.items():
+        title = args.title if args.title else measure
         df_dict["dtype"] = fptypes[args.fp_type]
         df_dict["fsgd"] = fsgd
+        df_dict["stats_type"] = args.stats_type
         if "cortical" in df_dict:
             hemi_stats, volume_stats = compute_stats_volume_group(**df_dict)
-            plot_hemi_group(hemi_stats, title=measure, show=args.show)
-            plot_cortical_volume_group(volume_stats, title=measure, show=args.show)
+            plot_hemi_group(
+                hemi_stats,
+                title=title,
+                show=args.show,
+                output=args.output + "-hemi-group",
+                xaxis=args.xaxis,
+                yaxis=args.yaxis,
+                log_y=args.log_yaxis,
+            )
+            plot_cortical_volume_group(
+                volume_stats,
+                title=title,
+                show=args.show,
+                output=args.output + "-group",
+                xaxis=args.xaxis,
+                yaxis=args.yaxis,
+                log_y=args.log_yaxis,
+            )
         else:
             hemi_stats = compute_stats_group(**df_dict)
-            plot_hemi_group(hemi_stats, title=measure, show=args.show)
+            plot_hemi_group(
+                hemi_stats,
+                title=title,
+                show=args.show,
+                output=args.output + "-group",
+                xaxis=args.xaxis,
+                yaxis=args.yaxis,
+                log_y=args.log_yaxis,
+            )
 
 
 def parse_args():
@@ -438,10 +541,14 @@ def parse_args():
     )
     parser.add_argument("--show", action="store_true", help="Show figures")
     parser.add_argument("--fsgd", help="FSGD file")
+    parser.add_argument("--output", help="Output filename")
+    parser.add_argument("--xaxis", help="X-axis label")
+    parser.add_argument("--yaxis", help="Y-axis label")
+    parser.add_argument("--log-yaxis", action="store_true", help="Y-axis log")
+    parser.add_argument("--title", help="Figure title")
     parser.add_argument(
-        "--plot-subject", action="store_true", help="Plot subject analysis"
+        "--stats-type", choices=["sig", "std"], default="sig", help="Stats to measure"
     )
-    parser.add_argument("--plot-group", action="store_true", help="Plot group analysis")
     args = parser.parse_args()
     return args
 
@@ -451,11 +558,8 @@ def main():
     files_dict = get_files(args.directory, measure_to_parse=args.measure)
     df_dict = make_df(files_dict)
 
-    if args.plot_subject:
-        plot_subject(args, df_dict)
-
-    if args.plot_group:
-        plot_group(args, df_dict)
+    plot_subject(args, df_dict)
+    plot_group(args, df_dict)
 
 
 if "__main__" == __name__:

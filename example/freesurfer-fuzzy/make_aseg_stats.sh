@@ -20,7 +20,7 @@ done
 for rep in $REPETITIONS; do
     SUBJECTS=$(find ${rep} -type d -name "sub-*" -printf "%f ")
     for hemi in lh rh; do
-        for measure in thickness volume thickness thicknessstd meancurv gauscurv foldind curvind; do
+        for measure in area thickness volume thickness thicknessstd meancurv gauscurv foldind curvind; do
             docker run -v $PWD:$PWD -e SUBJECTS_DIR=$PWD/${rep} ${FS_DOCKER} aparcstats2table --subjects ${SUBJECTS} --tablefile ${STATS_DIR}/$(basename ${rep})-${hemi}-${measure}.tsv \
                 --hemi ${hemi} -m ${measure} -p aparc.a2009s
         done

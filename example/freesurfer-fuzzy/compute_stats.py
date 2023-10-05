@@ -1,24 +1,29 @@
 import argparse
 import glob
 import os
+import sys
+from typing import List
 from warnings import simplefilter
+import json
 
 import numpy as np
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-from fsgd_parser import FSGDParser
-from scipy.stats import mannwhitneyu, ttest_ind
+from icecream import ic
 from significantdigits import significant_digits as sigdig
 
-from icecream import ic
+from fsgd_parser import FSGDParser
 
 ic.configureOutput(includeContext=True)
 
 simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 
 
+def end():
+    sys.exit(0)
+
+
 units = {
+    "area": "",
     "curvind": "",
     "foldind": "",
     "gauscurv": "",
@@ -106,30 +111,39 @@ default_fptype = "float64"
 fptypes = {default_fptype: np.float64, "float32": np.float32, "float16": np.float16}
 
 
-def get_fsgd(filename):
+def get_fsgd(filename: str) -> pd.DataFrame:
     parser = FSGDParser(filename, input_name="subjid", class_name="PD-status")
     parser.parse()
     return parser.as_dataframe()
 
 
-def parse_file(filenames):
+def parse_file(filenames: List[str]) -> pd.DataFrame:
     df = pd.concat(pd.read_csv(f, sep="\t") for f in filenames)
     return df
 
 
-def get_files(directory, measure_to_parse=None):
+def _get_basename_wo_ext(filename: str) -> str:
+    """return basename filename without extension"""
+    return os.path.splitext(os.path.basename(filename))[0]
+
+
+def _get_files(files: List[str], columns: List[str]) -> pd.DataFrame:
+    data = {file: _get_basename_wo_ext(file).split("-") for file in files}
+    df = pd.DataFrame.from_dict(data, orient="index", columns=columns)
+    return df
+
+
+def get_files(directory: str, hemi: bool) -> pd.DataFrame:
     files = glob.glob(os.path.join(directory, "rep*.tsv"))
-    files_sorted = {}
-    for file in files:
-        (_, hemi, measure) = os.path.split(file)[-1].split("-")
-        measure = os.path.splitext(measure)[0]
-        key = (hemi, measure)
-        if measure_to_parse is None or measure_to_parse == measure:
-            files_sorted[key] = files_sorted.get(key, []) + [file]
-    return files_sorted
+    if hemi:
+        columns = ["repetition", "hemi", "measure"]
+    else:
+        columns = ["repetition", "area", "measure"]
+    df = _get_files(files, columns=columns)
+    return df
 
 
-def compute_sigdig(dtype, clip=True):
+def compute_significantdigits(dtype, clip=True):
     def fun(x):
         y = sigdig(
             x.to_numpy().astype(np.float32),
@@ -144,422 +158,160 @@ def compute_sigdig(dtype, clip=True):
     return fun
 
 
-def compute_stats(lh, rh, dtype, stats_type="sig"):
-    stats_name_l = lh.columns[0]
-    stats_name_r = rh.columns[0]
-    if stats_type == "sig":
-        stats_l = lh.groupby(stats_name_l).agg(compute_sigdig(dtype)).transpose()
-        stats_r = rh.groupby(stats_name_r).agg(compute_sigdig(dtype)).transpose()
-    elif stats_type == "std":
-        stats_l = lh.groupby(stats_name_l).agg("std").transpose()
-        stats_r = rh.groupby(stats_name_r).agg("std").transpose()
-    stats = pd.concat((stats_l, stats_r))
-    stats.drop(["BrainSegVolNotVent", "eTIV"], inplace=True)
-    stats["hemi"] = stats.index.to_series().apply(lambda s: s.split("_")[0])
-    stats.index = stats.index.to_series().apply(lambda s: "_".join(s.split("_")[1:]))
-    return stats
+def make_df_hemi(df: pd.DataFrame, hemi: str) -> pd.DataFrame:
+    """
+    Preprocess hemi df
+    """
+    hemi_df = parse_file(df[df["hemi"] == hemi].index)
+    hemi_prefixed_columns = [col for col in hemi_df.columns if col.startswith(hemi)]
+    remove_prefix = {col: col[3:] for col in hemi_prefixed_columns}
+    # other_columns = [col for col in hemi_df.columns if not col.startswith(hemi)]
+    hemi_df.rename(columns=remove_prefix, inplace=True)
+    hemi_df.rename(columns={hemi_df.columns[0]: "subjid"}, inplace=True)
+    hemi_df["hemi"] = hemi
+    return hemi_df
 
 
-def preprocess_hemi_group(fsgd, hemi: pd.DataFrame):
-    unique = hemi[hemi.columns[0]].value_counts() == 1
-    unique = unique[unique]
-    hemi = hemi[~hemi.isin(unique.index)]
-
-    subjid = fsgd["subjid"]
-    stats_name = hemi.columns[0]
-    hemi = hemi[hemi[stats_name].isin(subjid)]
-
-    hemi = pd.merge(left=hemi, right=fsgd, left_on=stats_name, right_on="subjid").drop(
-        stats_name, axis=1
-    )
-    hemi.drop(["BrainSegVolNotVent", "eTIV", "age", "sex"], axis=1, inplace=True)
-    hemi = pd.melt(
-        hemi,
-        id_vars=["subjid", "PD-status"],
-        var_name="parcellation",
-        value_name="thickness",
-    )
-    hemi["hemi"] = hemi["parcellation"].apply(lambda s: s.split("_")[0])
-    hemi["parcellation"] = hemi["parcellation"].apply(
-        lambda s: "_".join(s.split("_")[1:])
-    )
-
-    return hemi
+def make_df_area(
+    df: pd.DataFrame, area: str = None, measure: str = None
+) -> pd.DataFrame:
+    df = parse_file(df.index)
+    df.rename(columns={df.columns[0]: "subjid"}, inplace=True)
+    return df
 
 
-def preprocess_volume_group(fsgd, volume: pd.DataFrame):
-    unique = volume[volume.columns[0]].value_counts() == 1
-    unique = unique[unique]
-    volume = volume[~volume.isin(unique.index)]
-
-    subjid = fsgd["subjid"]
-    stats_name = volume.columns[0]
-    volume = volume[volume[stats_name].isin(subjid)]
-
-    volume = pd.merge(
-        left=volume, right=fsgd, left_on=stats_name, right_on="subjid"
-    ).drop(stats_name, axis=1)
-    volume.drop(["age", "sex"], axis=1, inplace=True)
-    volume = pd.melt(
-        volume,
-        id_vars=["subjid", "PD-status"],
-        var_name="parcellation",
-        value_name="thickness",
-    )
-
-    return volume
+def make_df(
+    df_files: pd.DataFrame, measure: str, hemi: bool, area: str = None
+) -> pd.DataFrame:
+    df = df_files[df_files["measure"] == measure]
+    if hemi:
+        lh = make_df_hemi(df, "lh")
+        rh = make_df_hemi(df, "rh")
+        df = pd.concat([lh, rh])
+    else:
+        df = make_df_area(df, area, measure)
+    return df
 
 
-def qqplot(pvalues, title, output):
-    x_identity = np.linspace(min(pvalues), max(pvalues), len(pvalues))
-    y_identity = x_identity
-    fig = px.scatter(x=x_identity, y=sorted(pvalues), trendline="ols")
-    fig.add_trace(
-        go.Scatter(x=x_identity, y=y_identity, mode="lines", line=dict(dash="dash"))
-    )
-    fig.update_yaxes(title="p-values")
-    fig.update_layout(title=title)
-    fig.write_html(f"qqplot-{output}.html")
-    fig.write_image(f"qqplot-{output}.png", width=1920, height=1080)
+def compute_stats_subject(
+    df: pd.DataFrame, stats: str, hemi: bool, dtype: np.dtype = np.float64
+) -> pd.DataFrame:
+    id_vars = ["subjid"] + (["hemi"] if hemi else [])
+    var_name = "ROI"
+    value_name = "measure"
 
-
-def test_statistical_difference_hemi(stats):
-    # Define the unique combinations of parcelation and hemi
-    unique_combinations = stats[["parcellation", "hemi"]].drop_duplicates().values
-
-    ttest = []
-    mann = []
-    parcellations = len(unique_combinations)
-
-    # Iterate through the unique combinations and apply the Mann-Whitney U test
-    for parcellation, hemi in unique_combinations:
-        group = stats[(stats["parcellation"] == parcellation) & (stats["hemi"] == hemi)]
-
-        # Separate the values based on PD-Status
-        group1 = group[group["PD-status"] == "PD-non-MCI"]["thickness"]
-        group2 = group[group["PD-status"] != "PD-non-MCI"]["thickness"]
-
-        # Apply the Mann-Whitney U test
-        stat, p = mannwhitneyu(group1, group2)
-        mann.append(p)
-        if p < 0.05 / parcellations:
-            print(
-                f"[Mann-Whitney U  ] Parcelation: {parcellation}, Hemisphere: {hemi}, Statistics: {stat}, p-value: {p/parcellations}"
-            )
-
-        # Apply the Student's t-test test
-        stat, p = ttest_ind(group1, group2)
-        ttest.append(p)
-        if p < 0.05 / parcellations:
-            print(
-                f"[Student's t-test] Parcelation: {parcellation}, Hemisphere: {hemi}, Statistics: {stat}, p-value: {p/parcellations}"
-            )
-
-    qqplot(mann, "Mann-Whitney U test", "mann-whitney-hemi")
-    qqplot(ttest, "Student's t-test", "ttest-hemi")
-
-
-def test_statistical_difference(stats):
-    # Define the unique combinations of parcelation and hemi
-    unique_combinations = stats[["parcellation"]].drop_duplicates().values
-
-    mann = []
-    ttest = []
-
-    parcellations = len(unique_combinations)
-    # Iterate through the unique combinations and apply the Mann-Whitney U test
-    for parcellation in unique_combinations:
-        group = stats[stats["parcellation"] == parcellation[0]]
-
-        # Separate the values based on PD-Status
-        group1 = group[group["PD-status"] == "PD-non-MCI"]["thickness"]
-        group2 = group[group["PD-status"] != "PD-non-MCI"]["thickness"]
-
-        # Apply the Mann-Whitney U test
-        stat, p = mannwhitneyu(group1, group2)
-        mann.append(p)
-        if p < 0.05 / parcellations:
-            print(
-                f"[Mann-Whitney U  ] Parcelation: {parcellation},  Statistics: {stat}, p-value: {p/parcellations}"
-            )
-
-        # Apply the Student's t-test test
-        stat, p = ttest_ind(group1, group2)
-        ttest.append(p)
-        if p < 0.05 / parcellations:
-            print(
-                f"[Student's t-test] Parcelation: {parcellation},  Statistics: {stat}, p-value: {p/parcellations}"
-            )
-
-    qqplot(mann, "Mann-Whitney U test", "mann-whitney-volume")
-    qqplot(ttest, "Student's t-test", "ttest-volume")
+    if stats == "mean":
+        df = df.melt(id_vars=id_vars, var_name=var_name, value_name=value_name)
+        return df.groupby(id_vars + [var_name]).mean(numeric_only=True)
+    if stats == "std":
+        df = df.melt(id_vars=id_vars, var_name=var_name, value_name=value_name)
+        return df.groupby(id_vars + [var_name]).std(numeric_only=True)
+    if stats == "sig":
+        df = df.melt(id_vars=id_vars, var_name=var_name, value_name=value_name)
+        return df.groupby(id_vars + [var_name]).agg(compute_significantdigits(dtype))
 
 
 def compute_stats_group(
-    lh: pd.DataFrame,
-    rh: pd.DataFrame,
-    dtype: np.dtype,
+    df: pd.DataFrame,
     fsgd: pd.DataFrame,
-    stats_type: str,
-):
-    fsgd["age"] = pd.to_numeric(fsgd["age"])
+    stats: str,
+    hemi: bool,
+    dtype: np.dtype = np.float64,
+) -> pd.DataFrame:
+    df = pd.merge(left=df, right=fsgd).drop(columns=["age", "sex"])
+    ic(df)
 
-    lh = preprocess_hemi_group(fsgd, lh)
-    rh = preprocess_hemi_group(fsgd, rh)
+    id_vars = ["subjid", "PD-status"] + (["hemi"] if hemi else [])
+    var_name = "ROI"
+    value_name = "measure"
 
-    stats = pd.concat([lh, rh])
-
-    if stats_type == "sig":
-        stats = stats.groupby(["subjid", "parcellation", "hemi", "PD-status"])[
-            ["thickness"]
-        ].agg(compute_sigdig(dtype))
-    elif stats_type == "std":
-        stats = stats.groupby(["subjid", "parcellation", "hemi", "PD-status"])[
-            ["thickness"]
-        ].std()
-
-    stats.reset_index(inplace=True)
-
-    test_statistical_difference_hemi(stats)
-
-    return stats
-
-
-def compute_stats_volume(lh, rh, cortical, dtype, stats_type):
-    hemi_stats = compute_stats(lh, rh, dtype, stats_type=stats_type)
-    stats_name = cortical.columns[0]
-    if stats_type == "sig":
-        volume_stats = cortical.groupby(stats_name).agg(compute_sigdig(dtype))
-    elif stats_type == "std":
-        volume_stats = cortical.groupby(stats_name).std()
-    return hemi_stats, volume_stats
-
-
-def compute_stats_volume_group(lh, rh, cortical, dtype, fsgd, stats_type):
-    hemi_stats = compute_stats_group(lh, rh, dtype, fsgd, stats_type=stats_type)
-    volume = preprocess_volume_group(fsgd, cortical)
-
-    fsgd["age"] = pd.to_numeric(fsgd["age"])
-
-    if stats_type == "sig":
-        volume_stats = volume.groupby(["subjid", "parcellation", "PD-status"])[
-            ["thickness"]
-        ].agg(compute_sigdig(dtype))
-    elif stats_type == "std":
-        volume_stats = volume.groupby(["subjid", "parcellation", "PD-status"])[
-            ["thickness"]
-        ].std()
-
-    volume_stats.reset_index(inplace=True)
-    test_statistical_difference_hemi(hemi_stats)
-    test_statistical_difference(volume_stats)
-
-    return hemi_stats, volume_stats
-
-
-def plot_hemi(
-    df,
-    title,
-    show,
-    output,
-    log_y,
-    xaxis="Cortical parcellation",
-    yaxis="Significant digits",
-):
-    fig = px.box(df, x=df.index, y=df.columns, color="hemi", log_y=log_y)
-    fig.update_layout(title=title)
-    fig.update_xaxes(title=xaxis)
-    fig.update_yaxes(title=yaxis)
-    if show:
-        fig.show()
-    fig.write_html(f"{output}.html")
-    fig.write_image(f"{output}.png", width=1920, height=1080)
-
-
-def plot_hemi_group(
-    df,
-    title,
-    show,
-    output,
-    log_y,
-    xaxis="Cortical parcellation",
-    yaxis="Significant digits",
-):
-    fig = px.box(
-        df,
-        x="parcellation",
-        y="thickness",
-        color="hemi",
-        facet_row="PD-status",
-        log_y=log_y,
-    )
-    fig.update_layout(title=title)
-    fig.update_xaxes(title=xaxis)
-    fig.update_yaxes(title=yaxis)
-    if show:
-        fig.show()
-    fig.write_html(f"{output}.html")
-    fig.write_image(f"{output}.png", width=1920, height=1080)
-
-
-def plot_cortical_volume(
-    df,
-    title,
-    show,
-    output,
-    log_y,
-    xaxis="Cortical parcellation",
-    yaxis="Significant digits",
-):
-    df.drop(columns=volume_units["unitless"], inplace=True)
-    fig = px.box(df, y=df.columns, log_y=log_y)
-    fig.update_layout(title=title)
-    fig.update_xaxes(title=xaxis)
-    fig.update_yaxes(title=yaxis)
-    if show:
-        fig.show()
-    fig.write_html(f"{output}.html")
-    fig.write_image(f"{output}.png", width=1920, height=1080)
-
-
-def plot_cortical_volume_group(
-    df,
-    title,
-    show,
-    output,
-    log_y,
-    xaxis="Cortical parcellation",
-    yaxis="Significant digits",
-):
-    fig = px.box(
-        df, x="parcellation", y="thickness", facet_col="PD-status", log_y=log_y
-    )
-    fig.update_layout(title=title)
-    fig.update_xaxes(title=xaxis)
-    fig.update_yaxes(title=yaxis)
-    if show:
-        fig.show()
-    fig.write_html(f"{output}.html")
-    fig.write_image(f"{output}.png", width=1920, height=1080)
-
-
-def make_df(files_dict):
-    df_dict = {}
-    for (hemi, measure), files in files_dict.items():
-        df = parse_file(files)
-        df_dict[measure] = df_dict.get(measure, {}) | {hemi: df}
-    return df_dict
-
-
-def plot_subject(args, df):
-    for measure, df_dict in df.items():
-        df_dict["dtype"] = fptypes[args.fp_type]
-        df_dict["stats_type"] = args.stats_type
-        title = args.title if args.title else measure
-        if "cortical" in df_dict:
-            hemi_stats, volume_stats = compute_stats_volume(**df_dict)
-            plot_hemi(
-                hemi_stats,
-                title=title,
-                show=args.show,
-                output=args.output + "-hemi-subject",
-                xaxis=args.xaxis,
-                yaxis=args.yaxis,
-                log_y=args.log_yaxis,
-            )
-            plot_cortical_volume(
-                volume_stats,
-                title=title,
-                show=args.show,
-                output=args.output + "-subject",
-                xaxis=args.xaxis,
-                yaxis=args.yaxis,
-                log_y=args.log_yaxis,
-            )
-        else:
-            hemi_stats = compute_stats(**df_dict)
-            plot_hemi(
-                hemi_stats,
-                title=title,
-                show=args.show,
-                output=args.output + "-subject",
-                xaxis=args.xaxis,
-                yaxis=args.yaxis,
-                log_y=args.log_yaxis,
-            )
-
-
-def plot_group(args, df):
-    fsgd = get_fsgd(args.fsgd)
-    for measure, df_dict in df.items():
-        title = args.title if args.title else measure
-        df_dict["dtype"] = fptypes[args.fp_type]
-        df_dict["fsgd"] = fsgd
-        df_dict["stats_type"] = args.stats_type
-        if "cortical" in df_dict:
-            hemi_stats, volume_stats = compute_stats_volume_group(**df_dict)
-            plot_hemi_group(
-                hemi_stats,
-                title=title,
-                show=args.show,
-                output=args.output + "-hemi-group",
-                xaxis=args.xaxis,
-                yaxis=args.yaxis,
-                log_y=args.log_yaxis,
-            )
-            plot_cortical_volume_group(
-                volume_stats,
-                title=title,
-                show=args.show,
-                output=args.output + "-group",
-                xaxis=args.xaxis,
-                yaxis=args.yaxis,
-                log_y=args.log_yaxis,
-            )
-        else:
-            hemi_stats = compute_stats_group(**df_dict)
-            plot_hemi_group(
-                hemi_stats,
-                title=title,
-                show=args.show,
-                output=args.output + "-group",
-                xaxis=args.xaxis,
-                yaxis=args.yaxis,
-                log_y=args.log_yaxis,
-            )
+    if stats == "mean":
+        df = df.melt(id_vars=id_vars, var_name=var_name, value_name=value_name)
+        return df.groupby(id_vars + [var_name]).mean(numeric_only=True)
+    if stats == "std":
+        df = df.melt(id_vars=id_vars, var_name=var_name, value_name=value_name)
+        return df.groupby(id_vars + [var_name]).std(numeric_only=True)
+    if stats == "sig":
+        df = df.melt(id_vars=id_vars, var_name=var_name, value_name=value_name)
+        return df.groupby(id_vars + [var_name]).agg(compute_significantdigits(dtype))
 
 
 def parse_args():
     parser = argparse.ArgumentParser("stats")
     parser.add_argument("--directory", default=".")
-    parser.add_argument("--measure", help="Parse measure only")
+    parser.add_argument("--json-data", required=True, help="JSON data file")
+    parser.add_argument(
+        "--hemi",
+        action="store_true",
+        help="Hemisphere measurement (expect lh, rh prefixes)",
+    )
+    parser.add_argument("--measure", required=True, help="Parse measure only")
     parser.add_argument(
         "--fp-type",
         choices=list(fptypes.keys()),
         default=default_fptype,
         help="Input floating-point data type",
     )
-    parser.add_argument("--show", action="store_true", help="Show figures")
-    parser.add_argument("--fsgd", help="FSGD file")
-    parser.add_argument("--output", help="Output filename")
-    parser.add_argument("--xaxis", help="X-axis label")
-    parser.add_argument("--yaxis", help="Y-axis label")
-    parser.add_argument("--log-yaxis", action="store_true", help="Y-axis log")
-    parser.add_argument("--title", help="Figure title")
     parser.add_argument(
-        "--stats-type", choices=["sig", "std"], default="sig", help="Stats to measure"
+        "--level-analysis",
+        required=True,
+        choices=["subject", "group"],
+        help="Level analysis",
     )
+    parser.add_argument("--fsgd", help="FSGD file")
+    parser.add_argument("--output", default="output.csv", help="Output filename")
+    parser.add_argument(
+        "--stats-type",
+        choices=["sig", "std", "mean"],
+        default="sig",
+        help="Stats to measure",
+    )
+    parser.add_argument("--verbose", action="store_true", help="Verbose mode")
     args = parser.parse_args()
     return args
 
 
+def set_verbose_mode(verbose: bool):
+    if verbose:
+        ic.enable()
+    else:
+        ic.disable()
+
+
+def drop_subjid_not_in_data(df: pd.DataFrame, json_data: str) -> pd.DataFrame:
+    with open(json_data, "r") as f:
+        data = json.load(f)
+    return df[df.index.get_level_values("subjid").isin(data["PATNO_id"].values())]
+
+
 def main():
     args = parse_args()
-    files_dict = get_files(args.directory, measure_to_parse=args.measure)
-    df_dict = make_df(files_dict)
+    set_verbose_mode(args.verbose)
 
-    plot_subject(args, df_dict)
-    plot_group(args, df_dict)
+    files_dict = get_files(args.directory, hemi=args.hemi)
+    ic(files_dict)
+
+    df = make_df(files_dict, args.measure, args.hemi)
+
+    if args.level_analysis == "subject":
+        stats = compute_stats_subject(
+            df, stats=args.stats_type, hemi=args.hemi, dtype=args.fp_type
+        )
+    elif args.level_analysis == "group":
+        fsgd = get_fsgd(args.fsgd)
+        ic(fsgd)
+        stats = compute_stats_group(
+            df, fsgd=fsgd, stats=args.stats_type, hemi=args.hemi, dtype=args.fp_type
+        )
+    else:
+        raise Exception("No level analysis provided")
+
+    ic(stats)
+
+    stats = drop_subjid_not_in_data(stats, args.json_data)
+    ic(stats)
+
+    stats.to_csv(args.output)
 
 
 if "__main__" == __name__:

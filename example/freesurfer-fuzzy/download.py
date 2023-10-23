@@ -1,15 +1,18 @@
 import argparse
+
+from sklearn import pipeline
 from vip_client import VipSession
 
 apikey_filename = ".api_token.txt"
+fs_pipeline_id = "FreeSurfer-Recon-all-fuzzy/v7.3.1"
 
 
 def login(api_key):
     VipSession.init(api_key=api_key)
 
 
-def create_session(session_name):
-    session = VipSession(session_name=session_name)
+def create_session(session_name, pipeline_id):
+    session = VipSession(session_name=session_name, pipeline_id=pipeline_id)
     return session
 
 
@@ -30,13 +33,22 @@ def get_args():
     parser.add_argument(
         "--session-name", default="freesurfer-fuzzy", type=str, help="Session name"
     )
+    parser.add_argument(
+        "--pipeline-id", default=fs_pipeline_id, type=str, help="Pipeline ID"
+    )
     return parser.parse_args()
 
 
 def main():
     args = get_args()
     login(args.api_key)
-    create_session(args.session_name)
+
+    if args.show_pipeline:
+        show_pipeline()
+        return
+
+    session = create_session(args.session_name, args.pipeline_id)
+    download_outputs(session)
 
 
 if __name__ == "__main__":

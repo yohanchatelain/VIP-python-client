@@ -10,7 +10,15 @@ def login(api_key):
 
 def create_session(session_name):
     session = VipSession(session_name=session_name)
+    return session
+
+
+def download_outputs(session):
     session.download_outputs()
+
+
+def show_pipeline():
+    VipSession.show_pipeline()
 
 
 def get_args():
@@ -18,6 +26,7 @@ def get_args():
     parser.add_argument(
         "--api-key", default=apikey_filename, type=str, help="API key for VIP"
     )
+    parser.add_argument("--show-pipeline", action="store_true", help="Show pipeline")
     parser.add_argument(
         "--session-name", default="freesurfer-fuzzy", type=str, help="Session name"
     )

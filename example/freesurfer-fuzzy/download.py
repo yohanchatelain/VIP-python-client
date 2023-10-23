@@ -1,6 +1,5 @@
 import argparse
 
-from sklearn import pipeline
 from vip_client import VipSession
 
 apikey_filename = ".api_token.txt"

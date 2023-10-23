@@ -9,8 +9,6 @@ from pathlib import *
 
 from vip_client.utils import vip
 
-import vipapi.vip as vip
-
 
 class VipLauncher:
     """

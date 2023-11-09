@@ -7,6 +7,19 @@ from warnings import simplefilter
 simplefilter(action="ignore", category=DeprecationWarning)
 
 
+# ROI to excludes
+# cortical: BrainSegVolNotVent, eTIV
+# subcortical: any ROI not starting with Left- or Right-
+def filter_roi(df, region):
+    if region == "cortical":
+        df["ROI"] = df["ROI"][~df["ROI"].isin(["BrainSegVolNotVent", "eTIV"])]
+    if region == "subcortical":
+        df["ROI"] = df["ROI"][
+            df["ROI"].str.startswith("Left-") | df["ROI"].str.startswith("Right-")
+        ]
+    return df
+
+
 volume_units = {
     "mm3": [
         "Left-Lateral-Ventricle",
@@ -95,9 +108,17 @@ def plot_box(
     facet_row=None,
     facet_col=None,
     color=None,
+    color_discrete_sequence=None,
 ):
     fig = px.box(
-        df, x=x, y=y, color=color, facet_row=facet_row, facet_col=facet_col, log_y=log_y
+        df,
+        x=x,
+        y=y,
+        color=color,
+        color_discrete_sequence=color_discrete_sequence,
+        facet_row=facet_row,
+        facet_col=facet_col,
+        log_y=log_y,
     )
     fig.update_layout(title=title)
     fig.update_xaxes(title=xaxis)
@@ -119,6 +140,7 @@ def plot_subject_level(df, title, show, output, color, log_y, xaxis, yaxis, face
         x="ROI",
         y="measure",
         color=color,
+        color_discrete_sequence=["#f37736", "#7bc043"],
         show=show,
         output=output,
         log_y=log_y,
@@ -141,6 +163,7 @@ def plot_group_level(
         x="ROI",
         y="measure",
         color="PD-status",
+        color_discrete_sequence=["#ee4035", "#0392cf"],
         log_y=log_y,
         facet_row=facet_row,
         facet_col=facet_col,
@@ -182,6 +205,12 @@ def parse_args():
     parser.add_argument("--log-yaxis", action="store_true", help="Y-axis log")
     parser.add_argument("--title", help="Figure title")
     parser.add_argument("--output", required=True, help="Output filename")
+    parser.add_argument(
+        "--region",
+        required=True,
+        choices=["cortical", "subcortical"],
+        help="Region to plot",
+    )
     args = parser.parse_args()
     return args
 
@@ -198,6 +227,8 @@ def main():
     if df.empty:
         print("No filenames provided")
         sys.exit(0)
+
+    df = filter_roi(df, args.region)
 
     if args.analysis_level == "subject":
         color = "hemi" if "hemi" in df.columns else None

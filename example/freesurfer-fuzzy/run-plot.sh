@@ -22,7 +22,7 @@ for level in "subject" "group"; do
     title="Surface area"
     echo "Parse" $filename
     python3 ${SCRIPT} --mca-filename ${filename} --output ${output} \
-        --analysis-level ${level} \
+        --analysis-level ${level} --region="cortical" \
         --xaxis "${xaxis}" --yaxis "${yaxis}" \
         --title "${title}" 2>>log
 
@@ -31,7 +31,7 @@ for level in "subject" "group"; do
     title="Cortical thickness"
     echo "Parse" $filename
     python3 ${SCRIPT} --mca-filename ${filename} --output ${output} \
-        --analysis-level ${level} \
+        --analysis-level ${level} --region="cortical" \
         --xaxis "${xaxis}" --yaxis "${yaxis}" \
         --title "${title}" 2>>log
 
@@ -40,7 +40,7 @@ for level in "subject" "group"; do
     title="Cortical volume"
     echo "Parse" $filename
     python3 ${SCRIPT} --mca-filename ${filename} --output ${output} \
-        --analysis-level ${level} \
+        --analysis-level ${level} --region="cortical" \
         --xaxis "${xaxis}" --yaxis "${yaxis}" \
         --title "${title}" 2>>log
 
@@ -49,7 +49,7 @@ for level in "subject" "group"; do
     title="Subcortical volume"
     echo "Parse" $filename
     python3 ${SCRIPT} --mca-filename ${filename} --output ${output} \
-        --analysis-level ${level} \
+        --analysis-level ${level} --region="subcortical" \
         --xaxis "${xaxis}" --yaxis "${yaxis}" \
         --title "${title}" 2>>log
 
@@ -66,7 +66,7 @@ for level in "subject" "group"; do
     title="Surface area"
     echo "Parse" $filename
     python3 ${SCRIPT} --mca-filename ${filename} --output ${output} \
-        --analysis-level ${level} \
+        --analysis-level ${level} --region="cortical" \
         --xaxis "${xaxis}" --yaxis "${yaxis}" \
         --title "${title}" --log-yaxis 2>>log
 
@@ -75,7 +75,7 @@ for level in "subject" "group"; do
     title="Cortical thickness"
     echo "Parse" $filename
     python3 ${SCRIPT} --mca-filename ${filename} --output ${output} \
-        --analysis-level ${level} \
+        --analysis-level ${level} --region="cortical" \
         --xaxis "${xaxis}" --yaxis "${yaxis}" \
         --title "${title}" --log-yaxis 2>>log
 
@@ -84,7 +84,7 @@ for level in "subject" "group"; do
     title="Cortical volume"
     echo "Parse" $filename
     python3 ${SCRIPT} --mca-filename ${filename} --output ${output} \
-        --analysis-level ${level} \
+        --analysis-level ${level} --region="cortical" \
         --xaxis "${xaxis}" --yaxis "${yaxis}" \
         --title "${title}" --log-yaxis 2>>log
 
@@ -93,7 +93,7 @@ for level in "subject" "group"; do
     title="Subcortical volume"
     echo "Parse" $filename
     python3 ${SCRIPT} --mca-filename ${filename} --output ${output} \
-        --analysis-level ${level} \
+        --analysis-level ${level} --region="subcortical" \
         --xaxis "${xaxis}" --yaxis "${yaxis}" \
         --title "${title}" --log-yaxis 2>>log
 
@@ -110,7 +110,7 @@ for level in "subject" "group"; do
     title="Surface area"
     echo "Parse" $filename
     python3 ${SCRIPT} --mca-filename ${filename} --output ${output} \
-        --analysis-level ${level} \
+        --analysis-level ${level} --region="cortical" \
         --xaxis "${xaxis}" --yaxis "${yaxis}" \
         --title "${title}" 2>>log
 
@@ -119,7 +119,7 @@ for level in "subject" "group"; do
     title="Cortical thickness"
     echo "Parse" $filename
     python3 ${SCRIPT} --mca-filename ${filename} --output ${output} \
-        --analysis-level ${level} \
+        --analysis-level ${level} --region="cortical" \
         --xaxis "${xaxis}" --yaxis "${yaxis}" \
         --title "${title}" 2>>log
 
@@ -128,7 +128,7 @@ for level in "subject" "group"; do
     title="Cortical volume"
     echo "Parse" $filename
     python3 ${SCRIPT} --mca-filename ${filename} --output ${output} \
-        --analysis-level ${level} \
+        --analysis-level ${level} --region="cortical" \
         --xaxis "${xaxis}" --yaxis "${yaxis}" \
         --title "${title}" 2>>log
 
@@ -137,7 +137,7 @@ for level in "subject" "group"; do
     title="Subcortical volume"
     echo "Parse" $filename
     python3 ${SCRIPT} --mca-filename ${filename} --output ${output} \
-        --analysis-level ${level} \
+        --analysis-level ${level} --region="subcortical" \
         --xaxis "${xaxis}" --yaxis "${yaxis}" \
         --title "${title}" 2>>log
 

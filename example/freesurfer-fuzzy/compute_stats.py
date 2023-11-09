@@ -234,6 +234,7 @@ def compute_stats_group(
     if stats == "sig":
         df = df.melt(id_vars=id_vars, var_name=var_name, value_name=value_name)
         return df.groupby(id_vars + [var_name]).agg(compute_significantdigits(dtype))
+    return df
 
 
 def parse_args():
@@ -262,7 +263,7 @@ def parse_args():
     parser.add_argument("--output", default="output.csv", help="Output filename")
     parser.add_argument(
         "--stats-type",
-        choices=["sig", "std", "mean"],
+        choices=["sig", "std", "mean", "none"],
         default="sig",
         help="Stats to measure",
     )

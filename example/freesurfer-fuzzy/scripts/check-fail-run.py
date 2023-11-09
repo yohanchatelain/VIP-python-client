@@ -37,7 +37,7 @@ def parse_args():
         required=True,
         help="Path to the directory containing the .tgz archive",
     )
-    args = parse_args()
+    args = parser.parse_args()
     return args
 
 

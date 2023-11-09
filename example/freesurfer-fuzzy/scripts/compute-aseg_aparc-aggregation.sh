@@ -9,8 +9,8 @@ fi
 ROOT=$(realpath $(dirname "${BASH_SOURCE[0]}"))
 
 # define aparcstats2table and asegstats2table
-aparcstats2table=python3 -$(realpath $ROOT/freesurfer/aparcstats2table)
-asegstats2table=python3 $(realpath $ROOT/freesurfer/asegstats2table)
+aparcstats2table=$(realpath $ROOT/freesurfer/aparcstats2table)
+asegstats2table=$(realpath $ROOT/freesurfer/asegstats2table)
 
 # Define the subjects directory and output directory for the tsv files
 SUBJECTS_DIR="$1"
@@ -40,12 +40,12 @@ for rep in rep*/; do
     for meas in "${MEASUREMENTS[@]}"; do
         # Handle subcortical volume separately as it does not require hemispheric specification
         if [ "$meas" == "volume" ]; then
-            asegstats2table --subjects ${SUBJECTS[@]} --meas "$meas" --tablefile "$OUTPUT_DIR/${rep}.aseg.$meas.tsv"
+            python3 $asegstats2table --subjects ${SUBJECTS[@]} --meas "$meas" --tablefile "$OUTPUT_DIR/${rep}.aseg.$meas.tsv"
             echo "aseg $meas table created at $OUTPUT_DIR/aseg.$meas.tsv"
         else
             # Loop through hemispheres for cortical measurements
             for hemi in lh rh; do
-                aparcstats2table --hemi "$hemi" --subjects ${SUBJECTS[@]} --meas "$meas" --tablefile "$OUTPUT_DIR/${rep}.${hemi}.aparc.$meas.tsv"
+                python3 $aparcstats2table --hemi "$hemi" --subjects ${SUBJECTS[@]} --meas "$meas" --tablefile "$OUTPUT_DIR/${rep}.${hemi}.aparc.$meas.tsv"
                 echo "${hemi} hemisphere aparc $meas table created at $OUTPUT_DIR/${hemi}.aparc.$meas.tsv"
             done
         fi

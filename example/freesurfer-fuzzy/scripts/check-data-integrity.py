@@ -15,7 +15,8 @@ def parallel_glob(directory, regexps):
     files = Parallel(n_jobs=len(reps), verbose=10)(
         delayed(glob_file)(rep, regexps) for rep in reps
     )
-    files = sum(files, [])
+    if files:
+        files = sum(files, start=[])
     return files
 
 
@@ -23,13 +24,10 @@ def check_files(directory, filename):
     regex = re.compile("rep[0-9]+/sub-.+_ses-[^/]+")
 
     # Build a set with subjects + session
-    # subjects = glob.glob(os.path.join(directory, "**", "sub-*_ses-*"), recursive=True)
-
     subjects = parallel_glob(directory, ("**", "sub-*_ses-*"))
     subjects_set = set(regex.findall(path)[0] for path in tqdm.tqdm(subjects))
 
     # Build a set with subjects + session containing filename
-    # files = glob.glob(os.path.join(directory, "**", filename), recursive=True)
     files = parallel_glob(directory, ("**", filename))
     files_set = set(regex.findall(path)[0] for path in tqdm.tqdm(files))
 

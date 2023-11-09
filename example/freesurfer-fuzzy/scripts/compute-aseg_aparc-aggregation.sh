@@ -71,13 +71,14 @@ get_subjects() {
     SUBJECTS=()
 
     # Loop through the subject directories and add them to the SUBJECTS array
-    counter=0
+    counter=1
     for subject_path in "$SUBJECTS_DIR"/sub-*; do
         if [[ "$subject_path" == *.tgz ]]; then
             if must_extract $subject_path; then
                 extract $subject_path &
                 if [ $((counter % MAX_THREADS)) -eq 0 ]; then
-                    wait
+                    wait -n
+                    counter=$((counter - 1))
                 fi
             else
                 echo "Skip extraction ${subject_path}"
@@ -98,7 +99,7 @@ for rep in rep*/; do
     echo "Getting subjects for ${SUBJECTS_DIR}"
     get_subjects
 
-    SUBJECTS_DIR=$TEMP_DIR/$rep
+    export SUBJECTS_DIR=$TEMP_DIR/$rep
     # Iterate over each measurement type
     for meas in "${MEASUREMENTS[@]}"; do
         # Handle subcortical volume separately as it does not require hemispheric specification

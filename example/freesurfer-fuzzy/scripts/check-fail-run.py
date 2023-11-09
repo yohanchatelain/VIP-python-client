@@ -4,8 +4,7 @@ import argparse
 import glob
 
 # Define the path to the .tgz archive and the file to check within the archive
-archive_path = "path/to/archive.tgz"
-file_to_check = "scripts/recon-all.done"
+file_to_check = "recon-all.done"
 
 
 def get_archives(directory):
@@ -37,6 +36,7 @@ def parse_args():
         required=True,
         help="Path to the directory containing the .tgz archive",
     )
+    parser.add_argument("--file-to-check", default=file_to_check)
     args = parser.parse_args()
     return args
 

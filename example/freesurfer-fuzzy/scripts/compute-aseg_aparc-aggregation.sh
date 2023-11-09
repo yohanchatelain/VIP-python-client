@@ -6,6 +6,12 @@ if [ "$#" -ne 2 ]; then
     exit 1
 fi
 
+ROOT=$(realpath $(dirname "${BASH_SOURCE[0]}"))
+
+# define aparcstats2table and asegstats2table
+aparcstats2table=python3 $(realpath $ROOT/freesurfer/aparcstats2table)
+asegstats2table=python3 $(realpath $ROOT/freesurfer/asegstats2table)
+
 # Define the subjects directory and output directory for the tsv files
 SUBJECTS_DIR="$1"
 OUTPUT_DIR="$2"

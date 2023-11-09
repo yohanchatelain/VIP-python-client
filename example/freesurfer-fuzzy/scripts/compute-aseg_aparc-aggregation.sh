@@ -100,6 +100,7 @@ for rep in rep*/; do
     get_subjects
 
     export SUBJECTS_DIR=$TEMP_DIR/$rep
+    mkdir -p ${OUTPUT_DIR}/$rep
     # Iterate over each measurement type
     for meas in "${MEASUREMENTS[@]}"; do
         # Handle subcortical volume separately as it does not require hemispheric specification

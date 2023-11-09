@@ -4,7 +4,7 @@ from vip_client import VipSession
 
 apikey_filename = ".api_token.txt"
 fs_pipeline_id = "FreeSurfer-Recon-all-fuzzy/v7.3.1"
-
+retry_max = 100
 
 def login(api_key):
     VipSession.init(api_key=api_key)
@@ -16,7 +16,13 @@ def create_session(session_name, pipeline_id):
 
 
 def download_outputs(session):
-    session.download_outputs()
+    retry = 0
+    while retry < retry_max:
+        try:
+            session.download_outputs(unzip=False, init_timeout=0)
+        except Exception as e:
+            print(e)
+            retry += 1
 
 
 def show_pipeline():

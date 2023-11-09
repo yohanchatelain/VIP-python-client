@@ -2,6 +2,7 @@ import tarfile
 import os
 import argparse
 import glob
+import tqdm
 
 # Define the path to the .tgz archive and the file to check within the archive
 file_to_check = "recon-all.done"
@@ -45,9 +46,13 @@ def main():
     args = parse_args()
     # Call the function and print the result
     archives = get_archives(args.directory)
-    for archive_path in archives:
+    failed = []
+    for archive_path in tqdm.tqdm(archives):
         if not check_file_in_tgz(archive_path, file_to_check):
-            print(archive_path, "does not contain", file_to_check)
+            failed.append(archive_path)
+
+    for archive_path in failed:
+        print(archive_path, "does not contain", file_to_check)
 
 
 if __name__ == "__main__":

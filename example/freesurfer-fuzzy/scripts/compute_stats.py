@@ -1,4 +1,3 @@
-
 import argparse
 import glob
 import os
@@ -138,7 +137,7 @@ def get_files(directory: str, hemi: bool) -> pd.DataFrame:
     files = glob.glob(os.path.join(directory, "rep*.tsv"))
     ic(files)
     if hemi:
-        columns = ["repetition", "hemi", "roi","measure"]
+        columns = ["repetition", "hemi", "roi", "measure"]
     else:
         columns = ["repetition", "roi", "measure"]
     df = _get_files(files, columns=columns)

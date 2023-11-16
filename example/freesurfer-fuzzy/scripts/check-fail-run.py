@@ -85,7 +85,8 @@ def main():
     archives = get_archives(args.directory)
     logger.debug("archives: ", archives)
     failed = []
-    for archive_path in tqdm.tqdm(archives):
+    # for archive_path in tqdm.tqdm(archives):
+    for archive_path in archives:
         if has_unzip_directory(args.unzip_directory, archive_path):
             if not check_file_in_directory(args.unzip_directory, file_to_check):
                 failed.append(archive_path)

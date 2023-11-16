@@ -1,3 +1,4 @@
+
 import argparse
 import glob
 import os
@@ -128,17 +129,18 @@ def _get_basename_wo_ext(filename: str) -> str:
 
 
 def _get_files(files: List[str], columns: List[str]) -> pd.DataFrame:
-    data = {file: _get_basename_wo_ext(file).split("-") for file in files}
+    data = {file: _get_basename_wo_ext(file).split(".") for file in files}
     df = pd.DataFrame.from_dict(data, orient="index", columns=columns)
     return df
 
 
 def get_files(directory: str, hemi: bool) -> pd.DataFrame:
     files = glob.glob(os.path.join(directory, "rep*.tsv"))
+    ic(files)
     if hemi:
-        columns = ["repetition", "hemi", "measure"]
+        columns = ["repetition", "hemi", "roi","measure"]
     else:
-        columns = ["repetition", "area", "measure"]
+        columns = ["repetition", "roi", "measure"]
     df = _get_files(files, columns=columns)
     return df
 

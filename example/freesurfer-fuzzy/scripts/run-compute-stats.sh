@@ -3,7 +3,7 @@
 ROOT=$(realpath $(dirname "${BASH_SOURCE[0]}"))
 
 SCRIPT=${ROOT}/compute_stats.py
-DIRECTORY=${ROOT}/../stats
+DIRECTORY=${ROOT}/../vip_outputs/freesurfer-fuzzy/stats
 FSGD=${ROOT}/scripts/fsgd_cort_group_HC_PDnonMCI_baseline.fsgd
 JSON=${ROOT}/scripts/json_data.json
 

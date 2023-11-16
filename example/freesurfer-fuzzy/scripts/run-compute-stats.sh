@@ -7,28 +7,31 @@ DIRECTORY=${ROOT}/../vip_outputs/freesurfer-fuzzy/csv/
 FSGD=${ROOT}/fsgd_cort_group_HC_PDnonMCI_baseline.fsgd
 JSON=${ROOT}/json_data.json
 
-
 # Initialize VERBOSE to an empty string
 VERBOSE=""
 
 # Loop through the arguments
-for arg in "$@"
-do
+for arg in "$@"; do
     if [ "$arg" == "verbose" ]; then
         VERBOSE="--verbose"
         break
     fi
 done
 
+run_and_print() {
+    echo "Executing: $@"
+    "$@"
+}
+
 # Compute mean
 STAT=mean
 DIR=${DIRECTORY}/aparc
 for measure in area thickness volume; do
     echo $DIR $STAT $measure
-    python3 ${SCRIPT} --directory ${DIRECTORY}/aparc --measure ${measure} \
+    run_and_print python3 ${SCRIPT} --directory ${DIRECTORY}/aparc --measure ${measure} \
         --level-analysis subject --hemi --fp-type float64 \
         --output="subject-${measure}-${STAT}.csv" --stats-type=$STAT --json-data=${JSON} $VERBOSE
-    python3 ${SCRIPT} --directory ${DIRECTORY}/aparc --measure ${measure} \
+    run_and_print python3 ${SCRIPT} --directory ${DIRECTORY}/aparc --measure ${measure} \
         --level-analysis group --fsgd ${FSGD} --hemi --fp-type float64 \
         --output="group-${measure}-${STAT}.csv" --stats-type=$STAT --json-data=${JSON} $VERBOSE
 done
@@ -36,10 +39,10 @@ done
 DIR=${DIRECTORY}/aseg
 measure=volume
 echo $DIR $STAT $measure
-python3 ${SCRIPT} --directory ${DIR} --measure ${measure} \
+run_and_print python3 ${SCRIPT} --directory ${DIR} --measure ${measure} \
     --level-analysis subject --fp-type float64 \
     --output="subject-subcortical-${measure}-${STAT}.csv" --json-data=${JSON} --stats-type=$STAT $VERBOSE
-python3 ${SCRIPT} --directory ${DIR} --measure ${measure} \
+run_and_print python3 ${SCRIPT} --directory ${DIR} --measure ${measure} \
     --level-analysis group --fsgd ${FSGD} --fp-type float64 \
     --output="group-subcortical-${measure}-${STAT}.csv" --json-data=${JSON} --stats-type=$STAT $VERBOSE
 
@@ -48,10 +51,10 @@ STAT=std
 DIR=${DIRECTORY}/aparc
 for measure in area thickness volume; do
     echo $DIR $STAT $measure
-    python3 ${SCRIPT} --directory ${DIRECTORY}/aparc --measure ${measure} \
+    run_and_print python3 ${SCRIPT} --directory ${DIRECTORY}/aparc --measure ${measure} \
         --level-analysis subject --hemi --fp-type float64 \
         --output="subject-${measure}-${STAT}.csv" --stats-type=$STAT --json-data=${JSON} $VERBOSE
-    python3 ${SCRIPT} --directory ${DIRECTORY}/aparc --measure ${measure} \
+    run_and_print python3 ${SCRIPT} --directory ${DIRECTORY}/aparc --measure ${measure} \
         --level-analysis group --fsgd ${FSGD} --hemi --fp-type float64 \
         --output="group-${measure}-${STAT}.csv" --stats-type=$STAT --json-data=${JSON} $VERBOSE
 done
@@ -59,10 +62,10 @@ done
 DIR=${DIRECTORY}/aseg
 measure=volume
 echo $DIR $STAT $measure
-python3 ${SCRIPT} --directory ${DIR} --measure ${measure} \
+run_and_print python3 ${SCRIPT} --directory ${DIR} --measure ${measure} \
     --level-analysis subject --fp-type float64 \
     --output="subject-subcortical-${measure}-${STAT}.csv" --stats-type=$STAT --json-data=${JSON} $VERBOSE
-python3 ${SCRIPT} --directory ${DIR} --measure ${measure} \
+run_and_print python3 ${SCRIPT} --directory ${DIR} --measure ${measure} \
     --level-analysis group --fsgd ${FSGD} --fp-type float64 \
     --output="group-subcortical-${measure}-${STAT}.csv" --stats-type=$STAT --json-data=${JSON} $VERBOSE
 
@@ -71,10 +74,10 @@ STAT=sig
 DIR=${DIRECTORY}/aparc
 for measure in area thickness volume; do
     echo $DIR $STAT $measure
-    python3 ${SCRIPT} --directory ${DIR} --measure ${measure} \
+    run_and_print python3 ${SCRIPT} --directory ${DIR} --measure ${measure} \
         --level-analysis subject --hemi --fp-type float16 \
         --output="subject-${measure}-${STAT}.csv" --stats-type=$STAT --json-data=${JSON} $VERBOSE
-    python3 ${SCRIPT} --directory ${DIR} --measure ${measure} \
+    run_and_print python3 ${SCRIPT} --directory ${DIR} --measure ${measure} \
         --level-analysis group --fsgd ${FSGD} --hemi --fp-type float16 \
         --output="group-${measure}-${STAT}.csv" --stats-type=$STAT --json-data=${JSON} $VERBOSE
 done
@@ -82,9 +85,9 @@ done
 DIR=${DIRECTORY}/aseg
 measure=volume
 echo $DIR $STAT $measure
-python3 ${SCRIPT} --directory ${DIR} --measure ${measure} \
+run_and_print python3 ${SCRIPT} --directory ${DIR} --measure ${measure} \
     --level-analysis subject --fp-type float16 \
     --output="subject-subcortical-${measure}-${STAT}.csv" --stats-type=$STAT --json-data=${JSON} $VERBOSE
-python3 ${SCRIPT} --directory ${DIR} --measure ${measure} \
+run_and_print python3 ${SCRIPT} --directory ${DIR} --measure ${measure} \
     --level-analysis group --fsgd ${FSGD} --fp-type float16 \
     --output="group-subcortical-${measure}-${STAT}.csv" --stats-type=$STAT --json-data=${JSON} $VERBOSE

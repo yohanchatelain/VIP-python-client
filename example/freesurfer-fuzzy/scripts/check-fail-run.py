@@ -43,6 +43,20 @@ def check_file_in_tgz(archive_path, unzip_directory, file_to_check):
         return False
 
 
+def extract_file_from_tgz(archive_path, unzip_directory, file_to_check):
+    try:
+        with tarfile.open(archive_path, "r:gz") as archive:
+            archive_members = [os.path.basename(f) for f in archive.getnames()]
+            # Check if the specified file exists in the list
+            if file_to_check in archive_members:
+                subject = os.path.splitext(os.path.basename(archive_path))[0]
+                unzip_directory_dest = os.path.join(unzip_directory, subject)
+                archive.extract(file_to_check, path=unzip_directory_dest)
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return False
+
+
 def has_unzip_directory(unzip_directory, archive_path):
     print("unzip_directory: ", unzip_directory)
     print("archive_path: ", archive_path)
@@ -92,6 +106,8 @@ def main():
     for archive_path in tqdm.tqdm(archives):
         if has_unzip_directory(args.unzip_directory, archive_path):
             print("has unzip directory")
+            if not check_file_in_directory(args.unzip_directory, file_to_check):
+                extract_file_from_tgz(archive_path, args.unzip_directory, file_to_check)
             if not check_file_in_directory(args.unzip_directory, file_to_check):
                 failed.append(archive_path)
         elif not check_file_in_tgz(archive_path, args.unzip_directory, file_to_check):

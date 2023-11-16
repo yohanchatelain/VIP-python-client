@@ -32,6 +32,7 @@ def check_file_in_tgz(archive_path, unzip_directory, file_to_check):
             if file_to_check in archive_members:
                 subject = os.path.splitext(os.path.basename(archive_path))[0]
                 unzip_directory_dest = os.path.join(unzip_directory, subject)
+                print(f"extracting {file_to_check} to: ", unzip_directory_dest)
                 archive.extract(file_to_check, path=unzip_directory_dest)
                 return True
             else:

@@ -78,6 +78,7 @@ def parse_args():
 
 def main():
     args = parse_args()
+    logger.setLevel(logging.DEBUG)
     if args.verbose:
         logger.setLevel(logging.DEBUG)
     else:

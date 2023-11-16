@@ -3,14 +3,10 @@ import os
 import argparse
 import glob
 import tqdm
-import pathlib
 import logging
 
-from py import log
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
 # Define the path to the .tgz archive and the file to check within the archive
 file_to_check = "recon-all.done"
 
@@ -43,7 +39,7 @@ def check_file_in_tgz(archive_path, file_to_check):
 
 
 def has_unzip_directory(unzip_directory, archive_path):
-    print("unzip_directory: ", unzip_directory)
+    logger.info("unzip_directory: ", unzip_directory)
     logger.debug("archive_path: ", archive_path)
     subject = os.path.splitext(os.path.basename(archive_path).split("."))[0]
     unzip_directory = os.path.join(unzip_directory, subject)

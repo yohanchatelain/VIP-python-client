@@ -107,8 +107,11 @@ def main():
         if has_unzip_directory(args.unzip_directory, archive_path):
             print("has unzip directory")
             if not check_file_in_directory(args.unzip_directory, file_to_check):
+                print(f"{file_to_check} not in {args.unzip_directory}")
+                print("extract it")
                 extract_file_from_tgz(archive_path, args.unzip_directory, file_to_check)
             if not check_file_in_directory(args.unzip_directory, file_to_check):
+                print(f"Failed: {file_to_check} not in {args.unzip_directory}")
                 failed.append(archive_path)
         elif not check_file_in_tgz(archive_path, args.unzip_directory, file_to_check):
             failed.append(archive_path)

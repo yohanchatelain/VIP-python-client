@@ -29,6 +29,7 @@ def check_file_in_tgz(archive_path, unzip_directory, file_to_check):
             # List all members of the archive
             archive_members = [os.path.basename(f) for f in archive.getnames()]
             # Check if the specified file exists in the list
+            print(archive_members)
             if file_to_check in archive_members:
                 subject = os.path.splitext(os.path.basename(archive_path))[0]
                 unzip_directory_dest = os.path.join(unzip_directory, subject)

@@ -5,11 +5,13 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.graph_objects import Figure
 from icecream import ic
-from scipy.stats import mannwhitneyu
+from scipy.stats import ttest_ind_from_stats
+from scipy.stats import combine_pvalues
 
 
-def qqplot(pvalues: List[float], title: str, output: str) -> None:
+def qqplot(pvalues: List[float], title: str, output: str) -> Figure:
     x_identity = np.linspace(min(pvalues), max(pvalues), len(pvalues))
     y_identity = x_identity
     fig = px.scatter(x=x_identity, y=sorted(pvalues), trendline="ols")
@@ -32,30 +34,60 @@ def qqplot(pvalues: List[float], title: str, output: str) -> None:
     return fig
 
 
-def test_statistical_difference(stats: pd.DataFrame, columns: List[str]) -> None:
+def test_statistical_difference(stats: pd.DataFrame, columns: List[str]) -> List[float]:
     # Define the unique combinations of parcelation and hemi
     stats = stats.reset_index()
     ic(columns)
-    unique_ROIs = stats[columns].drop_duplicates().values
-    mann = []
-    nb_ROIs = len(unique_ROIs)
+    unique_rois = stats[columns].drop_duplicates().values
+    pvalues = []
+    nb_rois = len(unique_rois)
 
     # Iterate through the unique combinations and apply the Mann-Whitney U test
-    for ids in unique_ROIs:
+    for ids in unique_rois:
         group = stats[stats[columns] == ids][columns]
         group = stats[group.notna().all(axis=1)]
         # Separate the values based on PD-Status
         group1 = group[group["PD-status"] == "PD-non-MCI"]["measure"]
         group2 = group[group["PD-status"] != "PD-non-MCI"]["measure"]
 
-        # Apply the Mann-Whitney U test
-        stat, p = mannwhitneyu(group1, group2)
-        mann.append(p)
-        if p < 0.05 / nb_ROIs:
-            roi = ",".join(zip(columns, ids))
-            print(f"[Mann-Whitney U  ] Statistics: {stat}, {roi}, p-value: {p}")
+        # Apply the T-test
+        mean1 = group1.mean()
+        std1 = group1.std()
+        nobs1 = group1.count()
+        mean2 = group2.mean()
+        std2 = group2.std()
+        nobs2 = group2.count()
 
-    return mann
+        stat, p = ttest_ind_from_stats(
+            mean1=mean1, std1=std1, mean2=mean2, std2=std2, nobs1=nobs1, nobs2=nobs2
+        )
+
+        if np.isnan(p):
+            print(f"NaN p-value: {p} for {ids}")
+            print(mean1, std1, nobs1)
+            print(mean2, std2, nobs2)
+        else:
+            pvalues.append(p)
+
+        if p < 0.05 / nb_rois:
+            roi = ",".join(zip(columns, ids))
+            print(f"T-test] Statistics: {stat}, {roi}, p-value: {p}")
+
+    return pvalues
+
+
+def fisher_method(pvalues):
+    methods = [
+        # "fisher",
+        "pearson",
+        # "stouffer",
+        # "mudholkar_george",
+        # "tippett",
+    ]
+    for method in methods:
+        stats, pvalue = combine_pvalues(pvalues, method=method)
+        if pvalue < 0.05:
+            print(f"Fisher's method ({method}): {pvalue}")
 
 
 def parse_filename(filename: str) -> pd.DataFrame:
@@ -83,6 +115,7 @@ def main():
 
     columns = ["ROI"] + (["hemi"] if "hemi" in df.columns else [])
     pvalues = test_statistical_difference(df, columns)
+    fisher_method(pvalues)
 
     fig = qqplot(pvalues, args.title, args.output)
 

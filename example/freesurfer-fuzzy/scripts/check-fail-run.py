@@ -22,7 +22,7 @@ def get_directory(directory):
 
 
 # Function to check if a file exists in a tar.gz archive
-def check_file_in_tgz(archive_path, file_to_check):
+def check_file_in_tgz(archive_path, unzip_directory, file_to_check):
     try:
         # Open the tar.gz archive
         with tarfile.open(archive_path, "r:gz") as archive:
@@ -30,6 +30,9 @@ def check_file_in_tgz(archive_path, file_to_check):
             archive_members = [os.path.basename(f) for f in archive.getnames()]
             # Check if the specified file exists in the list
             if file_to_check in archive_members:
+                subject = os.path.splitext(os.path.basename(archive_path))[0]
+                unzip_directory_dest = os.path.join(unzip_directory, subject)
+                archive.extract(file_to_check, path=unzip_directory_dest)
                 return True
             else:
                 return False
@@ -88,7 +91,7 @@ def main():
         if has_unzip_directory(args.unzip_directory, archive_path):
             if not check_file_in_directory(args.unzip_directory, file_to_check):
                 failed.append(archive_path)
-        elif not check_file_in_tgz(archive_path, file_to_check):
+        elif not check_file_in_tgz(archive_path, args.unzip_directory, file_to_check):
             failed.append(archive_path)
 
     for archive_path in failed:

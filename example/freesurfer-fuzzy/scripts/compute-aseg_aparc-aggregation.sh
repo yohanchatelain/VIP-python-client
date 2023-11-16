@@ -26,6 +26,7 @@ mkdir -p "$OUTPUT_DIR"
 
 # Initialize an array with the different measurement types
 MEASUREMENTS=(area volume thickness thicknessstd meancurv)
+
 # Initialize an array with the different hemispheres
 HEMIS=(lh rh)
 
@@ -106,13 +107,12 @@ for rep in rep*/; do
         if [ "$meas" == "volume" ]; then
             python3 $asegstats2table --skip --subjects ${SUBJECTS[@]} --meas "$meas" --tablefile "$OUTPUT_DIR/${rep%/}.aseg.$meas.tsv"
             echo "aseg $meas table created at $OUTPUT_DIR/aseg.$meas.tsv"
-        else
+        fi
             # Loop through hemispheres for cortical measurements
             for hemi in lh rh; do
                 python3 $aparcstats2table --skip --parc aparc.a2009s --hemi "$hemi" --subjects ${SUBJECTS[@]} --meas "$meas" --tablefile "$OUTPUT_DIR/${rep%/}.${hemi}.aparc.$meas.tsv"
                 echo "${hemi} hemisphere aparc $meas table created at $OUTPUT_DIR/${hemi}.aparc.$meas.tsv"
             done
-        fi
     done
 done
 

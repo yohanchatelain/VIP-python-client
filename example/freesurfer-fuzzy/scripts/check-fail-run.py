@@ -9,6 +9,7 @@ import logging
 from py import log
 
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 # Define the path to the .tgz archive and the file to check within the archive
 file_to_check = "recon-all.done"

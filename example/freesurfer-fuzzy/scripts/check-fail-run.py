@@ -41,7 +41,7 @@ def check_file_in_tgz(archive_path, file_to_check):
 def has_unzip_directory(unzip_directory, archive_path):
     print("unzip_directory: ", unzip_directory)
     print("archive_path: ", archive_path)
-    subject = os.path.splitext(os.path.basename(archive_path).split("."))[0]
+    subject = os.path.splitext(os.path.basename(archive_path))[0]
     unzip_directory = os.path.join(unzip_directory, subject)
     print("unzip_directory full path: ", unzip_directory)
     return os.path.isdir(unzip_directory)

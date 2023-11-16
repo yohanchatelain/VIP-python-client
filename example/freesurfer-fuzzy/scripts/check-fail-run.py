@@ -46,11 +46,12 @@ def check_file_in_tgz(archive_path, unzip_directory, file_to_check):
 def extract_file_from_tgz(archive_path, unzip_directory, file_to_check):
     try:
         with tarfile.open(archive_path, "r:gz") as archive:
-            archive_members = [f for f in archive.getnames()]
+            archive_names = archive.getnames()
+            archive_members = [os.path.basename(f) for f in archive_names]
             # Check if the specified file exists in the list
             if file_to_check in archive_members:
                 [file_to_check_fullpath] = [
-                    f for f in archive_members if f.endswith(file_to_check)
+                    f for f in archive_names if f.endswith(file_to_check)
                 ]
                 subject = os.path.splitext(os.path.basename(archive_path))[0]
                 unzip_directory_dest = os.path.join(unzip_directory, subject)

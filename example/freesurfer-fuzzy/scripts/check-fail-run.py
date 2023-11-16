@@ -105,8 +105,10 @@ def main():
     res = Parallel(n_jobs=args.n_jobs, verbose=10 if args.verbose else 0)(
         delayed(check_failure)(*sargs) for sargs in [(a, args) for a in archives]
     )
-    failed, i = zip(*res)
-
+    if res:
+        failed, i = zip(*res)
+    else:
+        failed = []
     for archive_path in failed:
         print(archive_path, "does not contain", file_to_check)
 

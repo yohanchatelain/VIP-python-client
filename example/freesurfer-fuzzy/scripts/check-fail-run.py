@@ -42,9 +42,11 @@ def check_file_in_tgz(archive_path, file_to_check):
 
 
 def has_unzip_directory(unzip_directory, archive_path):
+    logger.debug("unzip_directory: ", unzip_directory)
+    logger.debug("archive_path: ", archive_path)
     subject = os.path.splitext(os.path.basename(archive_path).split("."))[0]
     unzip_directory = os.path.join(unzip_directory, subject)
-    logger.debug("unzip_directory: ", unzip_directory)
+    logger.debug("unzip_directory full path: ", unzip_directory)
     return os.path.isdir(unzip_directory)
 
 

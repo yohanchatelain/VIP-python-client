@@ -70,9 +70,11 @@ def has_unzip_directory(unzip_directory, archive_path):
     return os.path.isdir(unzip_directory)
 
 
-def check_file_in_directory(unzip_directory, file_to_check):
+def check_file_in_directory(archive_path, unzip_directory, file_to_check):
+    subject = os.path.splitext(os.path.basename(archive_path))[0]
+    subject_path = os.path.join(unzip_directory, subject)
     # iterate over the directory and check if the file exists
-    for _, _, files in os.walk(unzip_directory):
+    for _, _, files in os.walk(subject_path):
         if file_to_check in files:
             return True
     return False
@@ -110,11 +112,15 @@ def main():
     for archive_path in tqdm.tqdm(archives):
         if has_unzip_directory(args.unzip_directory, archive_path):
             print("has unzip directory")
-            if not check_file_in_directory(args.unzip_directory, file_to_check):
+            if not check_file_in_directory(
+                archive_path, args.unzip_directory, file_to_check
+            ):
                 print(f"{file_to_check} not in {args.unzip_directory}")
                 print("extract it")
                 extract_file_from_tgz(archive_path, args.unzip_directory, file_to_check)
-            if not check_file_in_directory(args.unzip_directory, file_to_check):
+            if not check_file_in_directory(
+                archive_path, args.unzip_directory, file_to_check
+            ):
                 print(f"Failed: {file_to_check} not in {args.unzip_directory}")
                 failed.append(archive_path)
         elif not check_file_in_tgz(archive_path, args.unzip_directory, file_to_check):

@@ -49,9 +49,11 @@ def extract_file_from_tgz(archive_path, unzip_directory, file_to_check):
             archive_members = [os.path.basename(f) for f in archive.getnames()]
             # Check if the specified file exists in the list
             if file_to_check in archive_members:
+                [file_to_check_fullpath] = [f for f in archive_members if f.endswith(file_to_check))]
                 subject = os.path.splitext(os.path.basename(archive_path))[0]
                 unzip_directory_dest = os.path.join(unzip_directory, subject)
-                archive.extract(file_to_check, path=unzip_directory_dest)
+                print(f"extract {file_to_check_fullpath} to: ", unzip_directory_dest)
+                archive.extract(file_to_check_fullpath, path=unzip_directory_dest)
     except Exception as e:
         print(f"An error occurred: {e}")
         return False

@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -xe
+
 # Job id of the current task
 # SLURM_JOB_ID=36
 # Job id corresponding to the first job of the array

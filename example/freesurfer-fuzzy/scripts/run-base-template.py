@@ -4,11 +4,11 @@ import os
 import subprocess
 import tarfile
 import time
+import traceback
 from functools import wraps
 
-from joblib import Parallel, delayed
 import pytainer
-
+from joblib import Parallel, delayed
 
 DRY_RUN_ENABLED = False
 
@@ -229,7 +229,9 @@ def run_script(args: ArgumentScript):
         run_fs_base_template_apptainer(args)
         postprocess(args)
     except Exception as e:
-        raise e
+        error_traceback = traceback.format_exc()
+        msg = f"Error occurred while running the script: {e}\n{error_traceback}"
+        return msg
 
 
 def parse_args():
@@ -316,7 +318,11 @@ def main():
     )
 
     n_jobs = max(args.n_jobs, len(script_args)) if args.n_jobs != -1 else -1
-    Parallel(n_jobs=n_jobs)(delayed(run_script)(arg) for arg in script_args)
+    results = Parallel(n_jobs=n_jobs)(delayed(run_script)(arg) for arg in script_args)
+
+    for result in results or []:
+        if result:
+            print(result)
 
 
 if __name__ == "__main__":

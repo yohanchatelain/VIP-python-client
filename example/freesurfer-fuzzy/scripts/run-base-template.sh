@@ -60,7 +60,7 @@ if [ -z "$INPUT_JSON" ]; then
     INPUT_JSON=$PROJECT_ROOT/example/freesurfer-fuzzy/scripts/json_data_base.json
 fi
 
-OUTPUT_DIR=/scratch/ychatel/VIP-python-client/example/freesurfer-fuzzy/rep${REPETITION}
+OUTPUT_DIR=/scratch/ychatel/VIP-python-client/example/freesurfer-fuzzy/vip_outputs/freesurfer-fuzzy/rep${REPETITION}
 
 # Run from rep<n> directory
 cd ${OUTPUT_DIR}

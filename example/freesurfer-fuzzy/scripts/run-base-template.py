@@ -229,8 +229,7 @@ def run_script(args: ArgumentScript):
         run_fs_base_template_apptainer(args)
         postprocess(args)
     except Exception as e:
-        print(f"An error occurred: {e}")
-        return str(e)
+        raise e
 
 
 def parse_args():

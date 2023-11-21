@@ -166,7 +166,7 @@ def run_fs_base_template_apptainer(args: ArgumentScript) -> None:
     command = ["recon-all", "-base", base_template, first_visit, second_visit, "-all"]
     result = pytnr.exec(command, args.options)
     if result.has_failed():
-        raise RuntimeError(result.command, result.stderr)
+        raise RuntimeError(result.command_flatten, result.stderr)
     dump_output(args, result)
 
 

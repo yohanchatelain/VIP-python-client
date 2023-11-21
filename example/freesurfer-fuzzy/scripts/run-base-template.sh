@@ -60,7 +60,7 @@ if [ -z "$INPUT_JSON" ]; then
     INPUT_JSON=$PROJECT_ROOT/example/freesurfer-fuzzy/scripts/json_data_base.json
 fi
 
-OUTPUT_DIR=/scratch/ychatel/VIP-python-client/example/freesurfer-fuzzy/${REPETITION}
+OUTPUT_DIR=/scratch/ychatel/VIP-python-client/example/freesurfer-fuzzy/rep${REPETITION}
 
 # Run from rep<n> directory
 cd ${OUTPUT_DIR}
@@ -70,5 +70,5 @@ cd ${OUTPUT_DIR}
 # Freesurfer Zenodo 7916240
 # Create an unbiased template from all time points for each subject and process it with recon-all
 python3 $PYTHON_SCRIPT --fs-image ${FS_SIF} --input ${INPUT_JSON} \
-    --repetition ${REPETITION} --archive-dir ${ARCHIVE_PATH}/${REPETITION} \
+    --repetition ${REPETITION} --archive-dir ${ARCHIVE_PATH}/rep${REPETITION} \
     --output-dir ${OUTPUT_DIR} --src-license-dir ${PROJECT_ROOT} --src-home ${PWD} ${DRY_RUN}

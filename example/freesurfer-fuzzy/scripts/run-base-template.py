@@ -166,7 +166,7 @@ def run_fs_base_template_apptainer(args: ArgumentScript) -> None:
     command = ["recon-all", base_template, first_visit, second_visit, "-all"]
     result = pytnr.exec(command, args.options)
     if result.has_failed():
-        raise RuntimeError(result.command_flatten, result.stderr)
+        raise RuntimeError(result)
     dump_output(args, result)
 
 
@@ -229,9 +229,14 @@ def run_script(args: ArgumentScript):
         run_fs_base_template_apptainer(args)
         postprocess(args)
     except RuntimeError as e:
-        command = e.args[0]
-        stderr = e.args[1]
-        msg = f"RuntimeError occurred while running the script:\n{command}\n{stderr}"
+        result = e.args[0]
+        command = result.command
+        stdout = result.stdout
+        stderr = result.stderr
+        msg = "RuntimeError occurred while running the script:\n"
+        msg += f"Command:\n{command}\n"
+        msg += f"Stdout:\n{stdout}\n"
+        msg += f"Stderr:\n{stderr}\n"
         return msg
     except Exception as e:
         error_traceback = traceback.format_exc()

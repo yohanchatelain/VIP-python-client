@@ -163,7 +163,7 @@ def run_fs_base_template_apptainer(args: ArgumentScript) -> None:
     base_template = f"-base {args.base_template}"
     first_visit = f"-tp {args.first_visit}"
     second_visit = f"-tp {args.second_visit}"
-    command = ["recon-all", "-base", base_template, first_visit, second_visit, "-all"]
+    command = ["recon-all", base_template, first_visit, second_visit, "-all"]
     result = pytnr.exec(command, args.options)
     if result.has_failed():
         raise RuntimeError(result.command_flatten, result.stderr)

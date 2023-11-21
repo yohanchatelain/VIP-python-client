@@ -18,6 +18,8 @@ if [ -z "SLURM_ARRAY_TASK_COUNT" ]; then
     SLURM_ARRAY_TASK_COUNT=1
     SLURM_ARRAY_TASK_ID=1
 fi
+REPETITION=$SLURM_ARRAY_TASK_ID
+
 # Initialize a variable to indicate whether --dry-run is set to false by default
 dry_run=false
 
@@ -46,11 +48,12 @@ PROJECT_ROOT=$HOME/projects/rrg-glatard/ychatel/living-park/VIP-python-client/
 ARCHIVE_PATH=$PROJECT_ROOT/example/freesurfer-fuzzy/vip_outputs/freesurfer-fuzzy
 PYTHON_SCRIPT=$PROJECT_ROOT/example/freesurfer-fuzzy/scripts/run-base-template.py
 FS_SIF=$PROJECT_ROOT/freesurfer-7.3.1.sif
-OUTPUT_PATH=/scratch/ychatel/living-park/VIP-python-client/example/freesurfer-fuzzy/
-REPETITION=$SLURM_ARRAY_TASK_ID
+INPUT_JSON=$PROJECT_ROOT/example/freesurfer-fuzzy/scripts/json_data_base.json
+
+OUTPUT_DIR=/scratch/ychatel/living-park/VIP-python-client/example/freesurfer-fuzzy/${REPETITION}
 
 # Run from rep<n> directory
-cd ${OUTPUT_PATH}/${REPETITION}
+cd ${OUTPUT_DIR}
 
 # Step 1 - base template
 # Data from json_data_base.json

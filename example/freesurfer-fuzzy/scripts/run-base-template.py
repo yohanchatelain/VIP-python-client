@@ -228,6 +228,11 @@ def run_script(args: ArgumentScript):
         preprocess(args)
         run_fs_base_template_apptainer(args)
         postprocess(args)
+    except RuntimeError as e:
+        command = e.args[0]
+        stderr = e.args[1]
+        msg = f"RuntimeError occurred while running the script:\n{command}\n{stderr}"
+        return msg
     except Exception as e:
         error_traceback = traceback.format_exc()
         msg = f"Error occurred while running the script:\n{e}\n{error_traceback}"

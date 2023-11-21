@@ -15,12 +15,10 @@ set -xe
 # Lowest index of the array
 # SLURM_ARRAY_TASK_MIN=1
 
-if [ -z "SLURM_ARRAY_TASK_ID" ]; then
+if [ -z "${SLURM_ARRAY_TASK_ID}" ]; then
     # Simulate a slurm job array with one task
     SLURM_ARRAY_TASK_COUNT=1
     SLURM_ARRAY_TASK_ID=1
-else
-    echo "SLURM_ARRAY_TASK_ID: $SLURM_ARRAY_TASK_ID"
 fi
 REPETITION=$SLURM_ARRAY_TASK_ID
 

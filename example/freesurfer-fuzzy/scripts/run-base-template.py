@@ -57,10 +57,9 @@ def dry_run_decorator(force_call=False):
         @wraps(func)
         def wrapper(*args, **kwargs):
             if DRY_RUN_ENABLED:
-                print(
-                    f"Dry run activated for {func.__name__}. No actions will be performed."
-                )
-                print(f"Function arguments: args={args}, kwargs={kwargs}")
+                print(f"== [{func.__name__}] call start == ")
+                print(f"\targs={args}, kwargs={kwargs}")
+                print(f"== [{func.__name__}] call end == ")
                 return None if not force_call else func(*args, **kwargs)
             else:
                 return func(*args, **kwargs)

@@ -22,6 +22,11 @@ if [ -z "${SLURM_ARRAY_TASK_ID}" ]; then
 fi
 REPETITION=$SLURM_ARRAY_TASK_ID
 
+if [ -z "${SLURM_NTASKS}" ]; then
+    # Simulate a slurm job array with one task
+    SLURM_NTASKS=1
+fi
+
 # Initialize a variable to indicate whether --dry-run is set to false by default
 dry_run=false
 
@@ -34,6 +39,11 @@ while [[ $# -gt 0 ]]; do
         ;;
     --input-json)
         INPUT_JSON="$2"
+        shift # Remove the argument from the list of arguments
+        shift # Remove the value from the list of arguments
+        ;;
+    --n-tasks)
+        SLURM_NTASKS="$2"
         shift # Remove the argument from the list of arguments
         shift # Remove the value from the list of arguments
         ;;
@@ -69,6 +79,12 @@ cd ${OUTPUT_DIR}
 # Data from json_data_base.json
 # Freesurfer Zenodo 7916240
 # Create an unbiased template from all time points for each subject and process it with recon-all
-python3 $PYTHON_SCRIPT --fs-image ${FS_SIF} --input ${INPUT_JSON} \
-    --repetition ${REPETITION} --archive-dir ${ARCHIVE_PATH}/rep${REPETITION} \
-    --output-dir ${OUTPUT_DIR} --src-license-dir ${PROJECT_ROOT} --src-home ${PWD} ${DRY_RUN}
+python3 $PYTHON_SCRIPT --fs-image ${FS_SIF} \
+    --input ${INPUT_JSON} \
+    --repetition ${REPETITION} \
+    --archive-dir ${ARCHIVE_PATH}/rep${REPETITION} \
+    --output-dir ${OUTPUT_DIR} \
+    --src-license-dir ${PROJECT_ROOT} \
+    --src-home ${PWD} \
+    --n-jobs ${SLURM_NTASKS} \
+    ${DRY_RUN}

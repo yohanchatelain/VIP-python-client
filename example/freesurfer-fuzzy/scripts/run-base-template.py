@@ -300,7 +300,8 @@ def main():
         output_dir=args.output_dir,
     )
 
-    Parallel(n_jobs=args.n_jobs)(delayed(run_script)(arg) for arg in script_args)
+    n_jobs = max(args.n_jobs, len(script_args)) if args.n_jobs != -1 else -1
+    Parallel(n_jobs=n_jobs)(delayed(run_script)(arg) for arg in script_args)
 
 
 if __name__ == "__main__":

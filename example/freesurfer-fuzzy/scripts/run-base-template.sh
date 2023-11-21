@@ -30,6 +30,11 @@ while [[ $# -gt 0 ]]; do
         dry_run=true
         shift # Remove the argument from the list of arguments
         ;;
+    --input-json)
+        INPUT_JSON="$2"
+        shift # Remove the argument from the list of arguments
+        shift # Remove the value from the list of arguments
+        ;;
     *)
         # Handle other arguments here if needed
         shift # Remove the argument from the list of arguments
@@ -48,7 +53,10 @@ PROJECT_ROOT=$HOME/projects/rrg-glatard/ychatel/living-park/VIP-python-client/
 ARCHIVE_PATH=$PROJECT_ROOT/example/freesurfer-fuzzy/vip_outputs/freesurfer-fuzzy
 PYTHON_SCRIPT=$PROJECT_ROOT/example/freesurfer-fuzzy/scripts/run-base-template.py
 FS_SIF=$PROJECT_ROOT/freesurfer-7.3.1.sif
-INPUT_JSON=$PROJECT_ROOT/example/freesurfer-fuzzy/scripts/json_data_base.json
+
+if [ -z "$INPUT_JSON" ]; then
+    INPUT_JSON=$PROJECT_ROOT/example/freesurfer-fuzzy/scripts/json_data_base.json
+fi
 
 OUTPUT_DIR=/scratch/ychatel/living-park/VIP-python-client/example/freesurfer-fuzzy/${REPETITION}
 

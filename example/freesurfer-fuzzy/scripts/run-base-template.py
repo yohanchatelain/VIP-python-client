@@ -230,7 +230,7 @@ def run_script(args: ArgumentScript):
         postprocess(args)
     except Exception as e:
         error_traceback = traceback.format_exc()
-        msg = f"Error occurred while running the script: {e}\n{error_traceback}"
+        msg = f"Error occurred while running the script:\n{e}\n{error_traceback}"
         return msg
 
 

@@ -166,7 +166,7 @@ def run_fs_base_template_apptainer(args: ArgumentScript) -> None:
     command = ["recon-all", "-base", base_template, first_visit, second_visit, "-all"]
     result = pytnr.exec(command, args.options)
     if result.has_failed():
-        raise RuntimeError(result.stderr)
+        raise RuntimeError(result.command, result.stderr)
     dump_output(args, result)
 
 
@@ -320,9 +320,9 @@ def main():
     n_jobs = max(args.n_jobs, len(script_args)) if args.n_jobs != -1 else -1
     results = Parallel(n_jobs=n_jobs)(delayed(run_script)(arg) for arg in script_args)
 
-    for result in results or []:
+    for i, result in enumerate(results or []):
         if result:
-            print(result)
+            print(f"Result {i}:\n{result}")
 
 
 if __name__ == "__main__":

@@ -44,8 +44,9 @@ fi
 
 PROJECT_ROOT=$HOME/projects/rrg-glatard/ychatel/living-park/VIP-python-client/
 ARCHIVE_PATH=$PROJECT_ROOT/example/freesurfer-fuzzy/vip_outputs/freesurfer-fuzzy
-OUTPUT_PATH=/scratch/ychatel/living-park/VIP-python-client/example/freesurfer-fuzzy/
+PYTHON_SCRIPT=$PROJECT_ROOT/example/freesurfer-fuzzy/scripts/run-base-template.py
 FS_SIF=$PROJECT_ROOT/freesurfer-7.3.1.sif
+OUTPUT_PATH=/scratch/ychatel/living-park/VIP-python-client/example/freesurfer-fuzzy/
 REPETITION=$SLURM_ARRAY_TASK_ID
 
 # Run from rep<n> directory

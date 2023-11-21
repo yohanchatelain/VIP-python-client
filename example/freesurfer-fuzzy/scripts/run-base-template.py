@@ -191,25 +191,35 @@ def make_args(
 
 
 @dry_run_decorator()
+def remove(file):
+    os.remove(file)
+
+
+@dry_run_decorator()
+def mkdirs(path, exist_ok=True):
+    os.makedirs(path, exist_ok=exist_ok)
+
+
+@dry_run_decorator(force_call=True)
 def preprocess(args: ArgumentScript):
     while close_to_quota_limit():
         print("Waiting for the quota to be available")
         time.sleep(60)
     extract_if_not_exists(args.first_visit, args.archive_dir, args.output_dir)
     extract_if_not_exists(args.second_visit, args.archive_dir, args.output_dir)
-    os.makedirs("base_template", exist_ok=True)
+    mkdirs("base_template", exist_ok=True)
 
 
-@dry_run_decorator()
+@dry_run_decorator(force_call=True)
 def postprocess(args: ArgumentScript):
     archive_output_path = os.path.join(args.archive_dir, args.base_template + ".tar.gz")
     if zip(args.base_template, archive_output_path):
-        os.remove(args.base_template)
+        remove(args.base_template)
     else:
         print("Failed to zip the base template: ", args.base_template)
 
 
-@dry_run_decorator()
+@dry_run_decorator(force_call=True)
 def run_script(args: ArgumentScript):
     preprocess(args)
     run_fs_base_template_apptainer(args)

@@ -13,7 +13,7 @@ from joblib import Parallel, delayed
 DRY_RUN_ENABLED = False
 
 DST_LICENSE_DIR = "/etc/license"
-DST_LICENSE_PATH = os.path.join("license.txt")
+DST_LICENSE_PATH = os.path.join(DST_LICENSE_DIR, "license.txt")
 DST_HOME_DIR = "/home/"
 DST_SUBJECTS_DIR = DST_HOME_DIR
 

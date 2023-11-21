@@ -1,24 +1,60 @@
 #!/bin/bash
 
-PROJECT_ROOT=$HOME/projects/rrg-glatard/ychatel/living-park/VIP-python-client/
-FS_SIF=$PROJECT_ROOT/freesurfer-7.3.1.sif
+# Job id of the current task
+# SLURM_JOB_ID=36
+# Job id corresponding to the first job of the array
+# SLURM_ARRAY_JOB_ID=36 (37,38)
+# Index of the current task
+# SLURM_ARRAY_TASK_ID=1
+# Number of tasks in the array
+# SLURM_ARRAY_TASK_COUNT=3
+# Highest index of the array
+# SLURM_ARRAY_TASK_MAX=3
+# Lowest index of the array
+# SLURM_ARRAY_TASK_MIN=1
 
-export FS_LICENSE=$PROJECT_ROOT/freesurfer-fuzzy/license.txt
+if [ -z "SLURM_ARRAY_TASK_COUNT" ]; then
+    # Simulate a slurm job array with one task
+    SLURM_ARRAY_TASK_COUNT=1
+    SLURM_ARRAY_TASK_ID=1
+fi
+# Initialize a variable to indicate whether --dry-run is set to false by default
+dry_run=false
+
+# Check if the --dry-run argument is passed
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --dry-run)
+        dry_run=true
+        shift # Remove the argument from the list of arguments
+        ;;
+    *)
+        # Handle other arguments here if needed
+        shift # Remove the argument from the list of arguments
+        ;;
+    esac
+done
+
+# Check the value of dry_run
+if [ "$dry_run" = true ]; then
+    DRY_RUN="--dry-run"
+else
+    DRY_RUN=""
+fi
+
+PROJECT_ROOT=$HOME/projects/rrg-glatard/ychatel/living-park/VIP-python-client/
+ARCHIVE_PATH=$PROJECT_ROOT/example/freesurfer-fuzzy/vip_outputs/freesurfer-fuzzy
+OUTPUT_PATH=/scratch/ychatel/living-park/VIP-python-client/example/freesurfer-fuzzy/
+FS_SIF=$PROJECT_ROOT/freesurfer-7.3.1.sif
+REPETITION=$SLURM_ARRAY_TASK_ID
 
 # Run from rep<n> directory
-REPETITION=$1
-FIRST_VISIT=$2
-SECOND_VISIT=$3
-BASE=$4
-
-cd /scratch/ychatel/living-park/VIP-python-client/example/freesurfer-fuzzy/${REPETITION}
-
-mkdir -p base_template
-export SUBJECTS_DIR=$(pwd)
-
+cd ${OUTPUT_PATH}/${REPETITION}
 
 # Step 1 - base template
 # Data from json_data_base.json
 # Freesurfer Zenodo 7916240
 # Create an unbiased template from all time points for each subject and process it with recon-all
-apptainer exec -B $(realpath ../../../..):$(realpath ../../../..) ${FS_SIF} recon-all -base base_template/${BASE} -tp ${FIRST_VISIT} -tp ${SECOND_VISIT} -all
+python3 $PYTHON_SCRIPT --fs-image ${FS_SIF} --input ${INPUT_JSON} \
+    --repetition ${REPETITION} --archive-dir ${ARCHIVE_PATH}/${REPETITION} \
+    --output-dir ${OUTPUT_DIR} --src-license-dir ${PROJECT_ROOT} --src-home ${PWD} ${DRY_RUN}

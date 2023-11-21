@@ -47,27 +47,30 @@ class ArgumentScript:
         ]
 
 
-def dry_run_decorator(func):
+def dry_run_decorator(force_call=False):
     """
     Decorator to enable dry run mode for a function.
     If 'dry_run' parameter is True, the function will only log its actions instead of performing them.
     """
 
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        if DRY_RUN_ENABLED:
-            print(
-                f"Dry run activated for {func.__name__}. No actions will be performed."
-            )
-            print(f"Function arguments: args={args}, kwargs={kwargs}")
-            return None
-        else:
-            return func(*args, **kwargs)
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            if DRY_RUN_ENABLED:
+                print(
+                    f"Dry run activated for {func.__name__}. No actions will be performed."
+                )
+                print(f"Function arguments: args={args}, kwargs={kwargs}")
+                return None if not force_call else func(*args, **kwargs)
+            else:
+                return func(*args, **kwargs)
 
-    return wrapper
+        return wrapper
+
+    return decorator
 
 
-@dry_run_decorator
+@dry_run_decorator(force_call=True)
 def close_to_quota_limit(username="ychatel", ratio_limit=0.95):
     # Call the quota command to check the scratch quota
     # returns output like:
@@ -97,7 +100,7 @@ def close_to_quota_limit(username="ychatel", ratio_limit=0.95):
             return False
 
 
-@dry_run_decorator
+@dry_run_decorator()
 def dump_output(args, result):
     os.makedirs(os.path.join(args.output_dir, "log"), exist_ok=True)
     stdout_log_filename = (
@@ -116,7 +119,7 @@ def dump_output(args, result):
         fo.write(stderr)
 
 
-@dry_run_decorator
+@dry_run_decorator(force_call=True)
 def create_fixed_options(
     src_license_dir,
     dst_license_dir,
@@ -133,7 +136,7 @@ def create_fixed_options(
     return options
 
 
-@dry_run_decorator
+@dry_run_decorator()
 def extract_if_not_exists(visit, src, dst):
     extracted_visit_abspath = os.path.join(src, visit)
     if not os.path.exists(extracted_visit_abspath):
@@ -142,7 +145,7 @@ def extract_if_not_exists(visit, src, dst):
             tar.extractall(dst)
 
 
-@dry_run_decorator
+@dry_run_decorator()
 def zip(src, dst):
     try:
         with tarfile.open(dst, "w:gz") as tar:
@@ -152,7 +155,7 @@ def zip(src, dst):
     return True
 
 
-@dry_run_decorator
+@dry_run_decorator()
 def run_fs_base_template_apptainer(args: ArgumentScript) -> None:
     pytnr = pytainer.Pytainer(args.fs_image)
     base_template = f"-base {args.base_template}"
@@ -165,7 +168,7 @@ def run_fs_base_template_apptainer(args: ArgumentScript) -> None:
     dump_output(args, result)
 
 
-@dry_run_decorator
+@dry_run_decorator(force_call=True)
 def make_args(
     fs_image, options, first_visit, second_visit, base_template, archive_dir, output_dir
 ):
@@ -188,7 +191,7 @@ def make_args(
     return args
 
 
-@dry_run_decorator
+@dry_run_decorator()
 def preprocess(args: ArgumentScript):
     while close_to_quota_limit():
         print("Waiting for the quota to be available")
@@ -198,7 +201,7 @@ def preprocess(args: ArgumentScript):
     os.makedirs("base_template", exist_ok=True)
 
 
-@dry_run_decorator
+@dry_run_decorator()
 def postprocess(args: ArgumentScript):
     archive_output_path = os.path.join(args.archive_dir, args.base_template + ".tar.gz")
     if zip(args.base_template, archive_output_path):
@@ -207,7 +210,7 @@ def postprocess(args: ArgumentScript):
         print("Failed to zip the base template: ", args.base_template)
 
 
-@dry_run_decorator
+@dry_run_decorator()
 def run_script(args: ArgumentScript):
     preprocess(args)
     run_fs_base_template_apptainer(args)
@@ -258,7 +261,6 @@ def parse_args():
     return args
 
 
-@dry_run_decorator
 def main():
     args = parse_args()
 

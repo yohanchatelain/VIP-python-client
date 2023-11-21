@@ -176,13 +176,13 @@ def make_args(
     for patno in first_visit.keys():
         visit1 = first_visit[patno]
         visit2 = second_visit[patno]
-        base_template = base_template[patno]
+        base = base_template[patno]
         arg = ArgumentScript(
             fs_image=fs_image,
             options=options,
             first_visit=visit1,
             second_visit=visit2,
-            base_template=base_template,
+            base_template=base,
             archive_dir=archive_dir,
             output_dir=output_dir,
         )

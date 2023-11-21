@@ -256,7 +256,7 @@ def parse_args():
         "--dst-license-path", default=DST_LICENSE_PATH, help="License path in container"
     )
     parser.add_argument("--dry-run", action="store_true", help="Enable dry run mode")
-
+    parser.add_argument("--n-jobs", type=int, default=-1)
     args = parser.parse_args()
     return args
 
@@ -300,7 +300,7 @@ def main():
         output_dir=args.output_dir,
     )
 
-    Parallel(n_jobs=-1)(delayed(run_script)(arg) for arg in script_args)
+    Parallel(n_jobs=args.n_jobs)(delayed(run_script)(arg) for arg in script_args)
 
 
 if __name__ == "__main__":

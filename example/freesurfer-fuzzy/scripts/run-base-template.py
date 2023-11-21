@@ -286,7 +286,7 @@ def main():
 
     first_visit = maps["first_visit"]
     second_visit = maps["second_visit"]
-    base_template = maps["base_template"]
+    base_template = maps["PATNO_base"]
 
     script_args = make_args(
         fs_image=args.fs_image,

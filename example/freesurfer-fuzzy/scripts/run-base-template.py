@@ -139,9 +139,12 @@ def create_fixed_options(
 def extract_if_not_exists(visit, src, dst):
     extracted_visit_abspath = os.path.join(src, visit)
     if not os.path.exists(extracted_visit_abspath):
-        tar_visit_abspath = os.path.join(src, visit + ".tar.gz")
-        with tarfile.open(tar_visit_abspath) as tar:
-            tar.extractall(dst)
+        tar_visit_abspath = os.path.join(src, visit + ".tgz")
+        if os.path.exists(tar_visit_abspath):
+            with tarfile.open(tar_visit_abspath) as tar:
+                tar.extractall(dst)
+        else:
+            raise RuntimeError(f"Cannot find the visit {visit}: {tar_visit_abspath}")
 
 
 @dry_run_decorator()
@@ -221,9 +224,13 @@ def postprocess(args: ArgumentScript):
 
 @dry_run_decorator(force_call=True)
 def run_script(args: ArgumentScript):
-    preprocess(args)
-    run_fs_base_template_apptainer(args)
-    postprocess(args)
+    try:
+        preprocess(args)
+        run_fs_base_template_apptainer(args)
+        postprocess(args)
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return str(e)
 
 
 def parse_args():

@@ -4,18 +4,29 @@ import itertools
 import glob
 import argparse
 import os
+import logging
+from nibabel.filebasedimages import FileBasedImage
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 def load_mgz_file(file_path):
     try:
-        return nib.load(file_path).get_fdata()
+        logger.debug("Load file: %s", file_path)
+        return nib.load(file_path)
     except Exception as e:
-        print(f"Error loading file {file_path}: {e}")
+        logger.error(f"Error loading file {file_path}: {e}")
         return None
 
 
-def dice_coefficient(segmentation1, segmentation2):
+def dice_coefficient(segmentation1: FileBasedImage, segmentation2: FileBasedImage):
     """Compute Dice Coefficient, a measure of overlap between two segmentations."""
+
+    logger.debug("Compute Dice Coefficient for two segmentations.")
+    logger.debug("Segmentation 1 shape: %s", segmentation1.filename)
+    logger.debug("Segmentation 2 shape: %s", segmentation2.filename)
+
     if segmentation1.shape != segmentation2.shape:
         raise ValueError(
             "Shape mismatch: segmentation1 and segmentation2 must have the same shape."
@@ -41,15 +52,16 @@ def compare_multiple_segmentations(file_paths):
 def get_segmentations_file_paths(directory, subject, filename):
     """Get file paths for all segmentation files in a directory."""
     regexp = os.path.join(directory, "**", subject, "**", filename)
+    logger.debug("Search path for segmentation files: %s", regexp)
     return glob.glob(regexp, recursive=True)
 
 
 def print_info(pairwise_comparisons):
     """Print information about the Dice Coefficient scores."""
-    print("Mean Dice Coefficient:", np.mean(pairwise_comparisons))
-    print("Median Dice Coefficient:", np.median(pairwise_comparisons))
-    print("Min Dice Coefficient:", np.min(pairwise_comparisons))
-    print("Max Dice Coefficient:", np.max(pairwise_comparisons))
+    logger.info("Mean Dice Coefficient: %s", np.mean(pairwise_comparisons))
+    logger.info("Median Dice Coefficient: %s", np.median(pairwise_comparisons))
+    logger.info("Min Dice Coefficient: %s", np.min(pairwise_comparisons))
+    logger.info("Max Dice Coefficient: %s", np.max(pairwise_comparisons))
 
 
 def parse_args():
@@ -66,12 +78,15 @@ def parse_args():
     parser.add_argument(
         "--filename", type=str, help="Filename of segmentation files to compare."
     )
+    parser.add_argument("--verbose", action="store_true", help="Print verbose output.")
     args = parser.parse_args()
     return args
 
 
 def main():
     args = parse_args()
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
     file_paths = get_segmentations_file_paths(
         args.directory, args.subject, args.filename
     )

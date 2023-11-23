@@ -3,6 +3,7 @@ import numpy as np
 import itertools
 import glob
 import argparse
+import os
 
 
 def load_mgz_file(file_path):
@@ -39,7 +40,8 @@ def compare_multiple_segmentations(file_paths):
 
 def get_segmentations_file_paths(directory, subject, filename):
     """Get file paths for all segmentation files in a directory."""
-    return glob.glob(directory, f"**/{subject}/**/{filename}", recursive=True)
+    regexp = os.path.join(directory, "**", subject, "**", filename)
+    return glob.glob(regexp, recursive=True)
 
 
 def print_info(pairwise_comparisons):
@@ -56,15 +58,16 @@ def parse_args():
         description="Compare segmentations using Dice Coefficient."
     )
     parser.add_argument(
-        "directory",
+        "--directory",
         type=str,
         help="Directory containing segmentation files to compare.",
     )
-    parser.add_argument("subject", type=str, help="Subject ID.")
+    parser.add_argument("--subject", type=str, help="Subject ID.")
     parser.add_argument(
-        "filename", type=str, help="Filename of segmentation files to compare."
+        "--filename", type=str, help="Filename of segmentation files to compare."
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    return args
 
 
 def main():

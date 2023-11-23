@@ -7,7 +7,7 @@ import os
 import logging
 from nibabel.filebasedimages import FileBasedImage
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("QC")
 logging.basicConfig(level=logging.INFO)
 
 

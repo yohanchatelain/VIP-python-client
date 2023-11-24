@@ -11,7 +11,7 @@ from typing import Any, Literal
 
 import nibabel as nib
 import numpy as np
-from joblib import Memory
+from joblib import Memory, Parallel, delayed
 from nibabel.filebasedimages import FileBasedImage
 from nibabel.freesurfer.mghformat import MGHImage
 from nibabel.nifti1 import Nifti1Image
@@ -141,17 +141,28 @@ def compute_stats(pairwise_comparisons) -> dict[str, np.float64]:
     }
 
 
-def print_info(stats: dict[str, np.float64], subject: str) -> None:
+def print_info(
+    stats: dict[str, np.float64], subject: str, collect_output: list | None
+) -> None:
     """Print information about the Dice Coefficient scores."""
-    logger.info("Subject                : %s", subject)
-    logger.info("Mean   Dice Coefficient: %.3e", stats["mean"])
-    logger.info("Median Dice Coefficient: %.3e", stats["median"])
-    logger.info("Min    Dice Coefficient: %.3e", stats["min"])
-    logger.info("Max    Dice Coefficient: %.3e", stats["max"])
-    logger.info(
-        "Std    Dice Coefficient: %.3e",
-        stats["std"],
-    )
+    if collect_output is None:
+        logger.info("Subject                : %s", subject)
+        logger.info("Mean   Dice Coefficient: %.3e", stats["mean"])
+        logger.info("Median Dice Coefficient: %.3e", stats["median"])
+        logger.info("Min    Dice Coefficient: %.3e", stats["min"])
+        logger.info("Max    Dice Coefficient: %.3e", stats["max"])
+        logger.info(
+            "Std    Dice Coefficient: %.3e",
+            stats["std"],
+        )
+    else:
+        msg: str = f"Subject                : {subject}\n"
+        msg += f"Mean   Dice Coefficient: {stats['mean']:.3e}\n"
+        msg += f"Median Dice Coefficient: {stats['median']:.3e}\n"
+        msg += f"Min    Dice Coefficient: {stats['min']:.3e}\n"
+        msg += f"Max    Dice Coefficient: {stats['max']:.3e}\n"
+        msg += f"Std    Dice Coefficient: {stats['std']:.3e}\n"
+        collect_output.append(msg)
 
 
 def dump_stats(stats, cache_directory) -> None:
@@ -186,8 +197,34 @@ def parse_args() -> Namespace:
         "--cache-directory", type=str, default="cache", help="Cache directory"
     )
     parser.add_argument("--show-labels", action="store_true", help="Show labels.")
+    parser.add_argument("--n-jobs", type=int, default=1, help="Number of jobs.")
     args: Namespace = parser.parse_args()
     return args
+
+
+def process_single_subject(subject, args):
+    collect_output = []  # List to accumulate outputs
+
+    # Replace print statements with appending to the output list
+    collect_output.append(f"Processing subject: {subject}")
+
+    file_paths: list[str] = get_tarfiles(args.directory, subject)
+    dice_scores: NDArray[Any] | None = process_subject(
+        file_paths, args.cache_directory, args.filename, args.show_labels
+    )
+    subject_stats: dict[str, np.float64] = compute_stats(dice_scores)
+
+    # Accumulate information to be printed
+    subject_info = print_info(
+        subject_stats, subject, collect_output
+    )  # Assume this function formats the info
+    collect_output.append(subject_info)
+
+    return (
+        subject,
+        subject_stats,
+        "\n".join(collect_output),
+    )  # Return accumulated output as a single string
 
 
 def main() -> None:
@@ -205,14 +242,16 @@ def main() -> None:
     subjects: list[str] = args.subjects
     stats: dict[str, dict[str, np.float64]] = {}
 
-    for subject in subjects:
-        logger.debug("Process subject: %s", subject)
-        file_paths: list[str] = get_tarfiles(args.directory, subject)
-        dice_scores: NDArray[Any] | None = process_subject(
-            file_paths, args.cache_directory, args.filename, args.show_labels
-        )
-        stats[subject] = compute_stats(dice_scores)
-        print_info(stats[subject], subject)
+    results: list[Any] | None = Parallel(n_jobs=args.n_jobs)(
+        delayed(process_single_subject)(subject, args) for subject in subjects
+    )
+
+    if results is None:
+        raise ValueError("No results returned.")
+
+    for subject, subject_stats, subject_info in results:
+        stats[subject] = subject_stats
+        print(subject_info)
 
     dump_stats(stats, args.cache_directory)
 

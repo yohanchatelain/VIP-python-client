@@ -23,12 +23,14 @@ logging.basicConfig(level=logging.INFO)
 NImage = Nifti1Image | MGHImage
 
 
-def load_mgz_file(file_path: str) -> NImage | None:
+def load_mgz_file(
+    file_path: str, show_labels: bool = False, index: int = 0
+) -> NImage | None:
     try:
         logger.debug("Load file: %s", file_path)
         img: FileBasedImage = nib.load(file_path)
         if isinstance(img, NImage):
-            return img
+            print_info_image(img, index, show_labels)
         else:
             return None
     except Exception as e:
@@ -68,10 +70,11 @@ def dice_coefficient(segmentation1: NImage, segmentation2: NImage) -> float:
 
 
 def compare_multiple_segmentations(
-    file_paths, show_label
+    file_paths: list[str], show_labels: bool
 ) -> NDArray[Any] | Literal["Error in loading files"]:
     segmentations: list[NImage | None] = [
-        load_mgz_file(file_path) for file_path in file_paths
+        load_mgz_file(file_path, show_labels, i)
+        for (i, file_path) in enumerate(file_paths, start=1)
     ]
     if any(seg is None for seg in segmentations):
         return "Error in loading files"
@@ -79,8 +82,6 @@ def compare_multiple_segmentations(
     pairwise_comparisons = {}
     for (i, seg1), (j, seg2) in itertools.combinations(enumerate(segmentations), 2):
         if seg1 is not None and seg2 is not None:
-            print_info_image(seg1, 1, show_label)
-            print_info_image(seg2, 2, show_label)
             dice_score: float = dice_coefficient(seg1, seg2)
             pairwise_comparisons[(i, j)] = dice_score
 

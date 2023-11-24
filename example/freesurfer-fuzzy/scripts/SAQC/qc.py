@@ -125,8 +125,9 @@ def get_tarfiles(directory, subject) -> list[str]:
     return glob.glob(regexp, recursive=True)
 
 
-def print_info(pairwise_comparisons) -> None:
+def print_info(pairwise_comparisons, subject: str) -> None:
     """Print information about the Dice Coefficient scores."""
+    logger.info(f"Subject               : {subject}")
     logger.info("Mean   Dice Coefficient: %.3e", np.mean(pairwise_comparisons))
     logger.info("Median Dice Coefficient: %.3e", np.median(pairwise_comparisons))
     logger.info("Min    Dice Coefficient: %.3e", np.min(pairwise_comparisons))
@@ -146,7 +147,9 @@ def parse_args() -> Namespace:
         type=str,
         help="Directory containing segmentation files to compare.",
     )
-    parser.add_argument("--subject", type=str, help="Subject ID.")
+    parser.add_argument(
+        "--subjects", action="append", type=list, default=[], help="Subject ID."
+    )
     parser.add_argument(
         "--filename",
         type=str,
@@ -166,12 +169,14 @@ def main() -> None:
     args: Namespace = parse_args()
     if args.verbose:
         logger.setLevel(logging.DEBUG)
-    file_paths: list[str] = get_tarfiles(args.directory, args.subject)
 
-    dice_scores: NDArray[Any] | None = process_subject(
-        file_paths, args.cache_directory, args.filename, args.show_labels
-    )
-    print_info(dice_scores)
+    for subject in args.subjects:
+        logger.debug("Process subject: %s", subject)
+        file_paths: list[str] = get_tarfiles(args.directory, subject)
+        dice_scores: NDArray[Any] | None = process_subject(
+            file_paths, args.cache_directory, args.filename, args.show_labels
+        )
+        print_info(dice_scores, subject)
 
 
 if __name__ == "__main__":

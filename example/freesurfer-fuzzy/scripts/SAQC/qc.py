@@ -128,7 +128,7 @@ def get_tarfiles(directory, subject) -> list[str]:
     return glob.glob(regexp, recursive=True)
 
 
-def compute_stats(pairwise_comparisons):
+def compute_stats(pairwise_comparisons) -> dict[str, np.float64]:
     """Compute stats for Dice Coefficient scores."""
     return {
         "mean": np.mean(pairwise_comparisons),
@@ -139,15 +139,16 @@ def compute_stats(pairwise_comparisons):
     }
 
 
-def print_info(pairwise_comparisons, subject: str) -> None:
+def print_info(stats: dict[str, np.float64], subject: str) -> None:
     """Print information about the Dice Coefficient scores."""
     logger.info("Subject                : %s", subject)
-    logger.info("Mean   Dice Coefficient: %.3e", np.mean(pairwise_comparisons))
-    logger.info("Median Dice Coefficient: %.3e", np.median(pairwise_comparisons))
-    logger.info("Min    Dice Coefficient: %.3e", np.min(pairwise_comparisons))
-    logger.info("Max    Dice Coefficient: %.3e", np.max(pairwise_comparisons))
+    logger.info("Mean   Dice Coefficient: %.3e", stats["mean"])
+    logger.info("Median Dice Coefficient: %.3e", stats["median"])
+    logger.info("Min    Dice Coefficient: %.3e", stats["min"])
+    logger.info("Max    Dice Coefficient: %.3e", stats["max"])
     logger.info(
-        "Std    Dice Coefficient: %.3e", np.std(pairwise_comparisons, dtype=np.float64)
+        "Std    Dice Coefficient: %.3e",
+        stats["std"],
     )
 
 
@@ -200,7 +201,7 @@ def main() -> None:
             args.subjects = f.read().splitlines()
 
     subjects: list[str] = args.subjects
-    stats: dict[str, dict[str, float]] = {}
+    stats: dict[str, dict[str, np.float64]] = {}
 
     for subject in subjects:
         logger.debug("Process subject: %s", subject)

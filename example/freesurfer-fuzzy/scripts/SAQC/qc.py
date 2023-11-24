@@ -36,6 +36,18 @@ def load_mgz_file(file_path: str) -> NImage | None:
         return None
 
 
+def print_info_image(
+    segmentation: NImage, segmentation_id: int, show_labels: bool
+) -> None:
+    logger.debug("Segmentation %d: %s", segmentation_id, segmentation.get_filename())
+    logger.debug(" - shape: %s", segmentation.shape)
+    logger.debug(" - affine: %s", segmentation.affine)
+    if show_labels:
+        labels: NDArray = np.unique(segmentation.get_fdata())
+        logger.debug(" - #labels: %s", labels.size)
+        logger.debug(" - labels: %s", labels)
+
+
 def dice_coefficient(segmentation1: NImage, segmentation2: NImage) -> float:
     """Compute Dice Coefficient, a measure of overlap between two segmentations."""
 
@@ -70,7 +82,7 @@ def dice_coefficient(segmentation1: NImage, segmentation2: NImage) -> float:
 
 
 def compare_multiple_segmentations(
-    file_paths,
+    file_paths, show_label
 ) -> NDArray[Any] | Literal["Error in loading files"]:
     segmentations: list[NImage | None] = [
         load_mgz_file(file_path) for file_path in file_paths
@@ -81,6 +93,9 @@ def compare_multiple_segmentations(
     pairwise_comparisons = {}
     for (i, seg1), (j, seg2) in itertools.combinations(enumerate(segmentations), 2):
         if seg1 is not None and seg2 is not None:
+            if show_label:
+                print_info_image(seg1, 1, show_label)
+                print_info_image(seg2, 2, show_label)
             dice_score: float = dice_coefficient(seg1, seg2)
             pairwise_comparisons[(i, j)] = dice_score
 
@@ -88,7 +103,9 @@ def compare_multiple_segmentations(
 
 
 # Main function to process the subject data
-def process_subject(tar_subjects, cache_directory, filename) -> NDArray[Any] | None:
+def process_subject(
+    tar_subjects, cache_directory, filename, show_labels
+) -> NDArray[Any] | None:
     memory = Memory(cache_directory, verbose=0)
     cached_comparison = memory.cache(compare_multiple_segmentations)
 
@@ -109,7 +126,7 @@ def process_subject(tar_subjects, cache_directory, filename) -> NDArray[Any] | N
             mgz_files.append(dst)
 
         # Compare segmentations and cache the result
-        comparison_results = cached_comparison(mgz_files)
+        comparison_results = cached_comparison(mgz_files, show_labels)
 
         return comparison_results
 
@@ -150,6 +167,7 @@ def parse_args() -> Namespace:
     parser.add_argument(
         "--cache-directory", type=str, default="cache", help="Cache directory"
     )
+    parser.add_argument("--show-labels", action="store_true", help="Show labels.")
     args: Namespace = parser.parse_args()
     return args
 
@@ -161,7 +179,7 @@ def main() -> None:
     file_paths: list[str] = get_tarfiles(args.directory, args.subject)
 
     dice_scores: NDArray[Any] | None = process_subject(
-        file_paths, args.cache_directory, args.filename
+        file_paths, args.cache_directory, args.filename, args.show_labels
     )
     print_info(dice_scores)
 

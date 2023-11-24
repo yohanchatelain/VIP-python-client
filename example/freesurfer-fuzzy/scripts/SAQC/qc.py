@@ -7,7 +7,7 @@ import os
 import tarfile
 import tempfile
 from argparse import Namespace
-from typing import Any, Literal
+from typing import Any, Literal, Generator
 
 import nibabel as nib
 import numpy as np
@@ -241,16 +241,16 @@ def main() -> None:
     subjects: list[str] = args.subjects
     stats: dict[str, dict[str, np.float64]] = {}
 
-    results: list[Any] | None = Parallel(n_jobs=args.n_jobs)(
+    results = Parallel(n_jobs=args.n_jobs, return_as="generator_unordered")(
         delayed(process_single_subject)(subject, args) for subject in subjects
     )
 
     if results is None:
         raise ValueError("No results returned.")
-
-    for subject, subject_stats, subject_info in results:
-        stats[subject] = subject_stats
-        print(subject_info)
+    else:
+        for subject, subject_stats, subject_info in results:
+            stats[subject] = subject_stats
+            print(subject_info)
 
     dump_stats(stats, args.cache_directory)
 

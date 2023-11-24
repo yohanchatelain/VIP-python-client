@@ -79,9 +79,8 @@ def compare_multiple_segmentations(
     pairwise_comparisons = {}
     for (i, seg1), (j, seg2) in itertools.combinations(enumerate(segmentations), 2):
         if seg1 is not None and seg2 is not None:
-            if show_label:
-                print_info_image(seg1, 1, show_label)
-                print_info_image(seg2, 2, show_label)
+            print_info_image(seg1, 1, show_label)
+            print_info_image(seg2, 2, show_label)
             dice_score: float = dice_coefficient(seg1, seg2)
             pairwise_comparisons[(i, j)] = dice_score
 
@@ -126,10 +125,10 @@ def get_tarfiles(directory, subject) -> list[str]:
 
 def print_info(pairwise_comparisons) -> None:
     """Print information about the Dice Coefficient scores."""
-    logger.info("Mean Dice Coefficient: %s", np.mean(pairwise_comparisons))
-    logger.info("Median Dice Coefficient: %s", np.median(pairwise_comparisons))
-    logger.info("Min Dice Coefficient: %s", np.min(pairwise_comparisons))
-    logger.info("Max Dice Coefficient: %s", np.max(pairwise_comparisons))
+    logger.info("Mean Dice Coefficient: %.3e", np.mean(pairwise_comparisons))
+    logger.info("Median Dice Coefficient: %.3e", np.median(pairwise_comparisons))
+    logger.info("Min Dice Coefficient: %.3e", np.min(pairwise_comparisons))
+    logger.info("Max Dice Coefficient: %.3e", np.max(pairwise_comparisons))
     logger.info(
         "Std Dice Coefficient: %s", np.std(pairwise_comparisons, dtype=np.float64)
     )

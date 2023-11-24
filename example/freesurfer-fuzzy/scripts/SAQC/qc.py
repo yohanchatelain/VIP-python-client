@@ -31,6 +31,7 @@ def load_mgz_file(
         img: FileBasedImage = nib.load(file_path)
         if isinstance(img, NImage):
             print_info_image(img, index, show_labels)
+            return img
         else:
             return None
     except Exception as e:

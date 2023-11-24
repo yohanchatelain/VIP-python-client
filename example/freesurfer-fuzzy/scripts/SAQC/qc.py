@@ -147,9 +147,7 @@ def parse_args() -> Namespace:
         type=str,
         help="Directory containing segmentation files to compare.",
     )
-    parser.add_argument(
-        "--subjects", action="append", type=list, default=[], help="Subject ID."
-    )
+    parser.add_argument("--subjects", action="append", default=[], help="Subject ID.")
     parser.add_argument(
         "--filename",
         type=str,

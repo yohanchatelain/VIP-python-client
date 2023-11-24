@@ -105,15 +105,17 @@ def process_subject(
             subject: str = os.path.basename(tar_subject).split(".")[0]
             repetition: str = os.path.basename(os.path.dirname(tar_subject))
             archive_path: str = tar_subject
-            with tarfile.open(archive_path, "r:gz") as tar:
-                segmentation_path: str = f"{subject}/mri/{filename}"
-                new_segmentation_path: str = f"{repetition}_{filename}"
-                tar.extract(segmentation_path, path=temp_dir)
-                src: str = os.path.join(temp_dir, segmentation_path)
-                dst: str = os.path.join(temp_dir, new_segmentation_path)
-                os.rename(src, dst)
-
-            mgz_files.append(dst)
+            try:
+                with tarfile.open(archive_path, "r:gz") as tar:
+                    segmentation_path: str = f"{subject}/mri/{filename}"
+                    new_segmentation_path: str = f"{repetition}_{filename}"
+                    tar.extract(segmentation_path, path=temp_dir)
+                    src: str = os.path.join(temp_dir, segmentation_path)
+                    dst: str = os.path.join(temp_dir, new_segmentation_path)
+                    os.rename(src, dst)
+                    mgz_files.append(dst)
+            except tarfile.ReadError as e:
+                logger.error(f"Error extracting file {archive_path}: {e}")
 
         # Compare segmentations and cache the result
         comparison_results = cached_comparison(mgz_files, show_labels)

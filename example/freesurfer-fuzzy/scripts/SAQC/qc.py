@@ -144,6 +144,9 @@ def print_info(pairwise_comparisons) -> None:
     logger.info("Median Dice Coefficient: %s", np.median(pairwise_comparisons))
     logger.info("Min Dice Coefficient: %s", np.min(pairwise_comparisons))
     logger.info("Max Dice Coefficient: %s", np.max(pairwise_comparisons))
+    logger.info(
+        "Std Dice Coefficient: %s", np.std(pairwise_comparisons, dtype=np.float64)
+    )
 
 
 def parse_args() -> Namespace:

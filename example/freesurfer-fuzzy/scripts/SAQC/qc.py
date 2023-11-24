@@ -94,7 +94,9 @@ def process_subject(
     tar_subjects, cache_directory, filename, show_labels
 ) -> NDArray[Any] | None:
     memory = Memory(cache_directory, verbose=0)
-    cached_comparison = memory.cache(compare_multiple_segmentations)
+    cached_comparison = memory.cache(
+        compare_multiple_segmentations, ignore=["show_labels"]
+    )
 
     mgz_files = []
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -127,7 +129,7 @@ def get_tarfiles(directory, subject) -> list[str]:
 
 def print_info(pairwise_comparisons, subject: str) -> None:
     """Print information about the Dice Coefficient scores."""
-    logger.info(f"Subject               : {subject}")
+    logger.info("Subject                : %s", subject)
     logger.info("Mean   Dice Coefficient: %.3e", np.mean(pairwise_comparisons))
     logger.info("Median Dice Coefficient: %.3e", np.median(pairwise_comparisons))
     logger.info("Min    Dice Coefficient: %.3e", np.min(pairwise_comparisons))
@@ -149,6 +151,9 @@ def parse_args() -> Namespace:
     )
     parser.add_argument("--subjects", action="append", default=[], help="Subject ID.")
     parser.add_argument(
+        "--subjects-file", type=str, help="File containing subject IDs."
+    )
+    parser.add_argument(
         "--filename",
         type=str,
         default="aparc.a2009s+aseg.mgz",
@@ -167,6 +172,13 @@ def main() -> None:
     args: Namespace = parse_args()
     if args.verbose:
         logger.setLevel(logging.DEBUG)
+
+    if args.subjects_file and args.subjects:
+        raise ValueError("Please provide either --subjects or --subjects-file.")
+
+    if args.subjects_file:
+        with open(args.subjects_file, "r") as f:
+            args.subjects = f.read().splitlines()
 
     for subject in args.subjects:
         logger.debug("Process subject: %s", subject)

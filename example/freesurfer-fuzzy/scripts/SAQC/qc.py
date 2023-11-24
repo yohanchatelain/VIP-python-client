@@ -1,6 +1,7 @@
 import argparse
 import glob
 import itertools
+import json
 import logging
 import os
 import tarfile
@@ -11,9 +12,9 @@ from typing import Any, Literal
 import nibabel as nib
 import numpy as np
 from joblib import Memory
+from nibabel.filebasedimages import FileBasedImage
 from nibabel.freesurfer.mghformat import MGHImage
 from nibabel.nifti1 import Nifti1Image
-from nibabel.filebasedimages import FileBasedImage
 from numpy.typing import NDArray
 
 logger: logging.Logger = logging.getLogger("QC")
@@ -127,6 +128,17 @@ def get_tarfiles(directory, subject) -> list[str]:
     return glob.glob(regexp, recursive=True)
 
 
+def compute_stats(pairwise_comparisons):
+    """Compute stats for Dice Coefficient scores."""
+    return {
+        "mean": np.mean(pairwise_comparisons),
+        "median": np.median(pairwise_comparisons),
+        "min": np.min(pairwise_comparisons),
+        "max": np.max(pairwise_comparisons),
+        "std": np.std(pairwise_comparisons, dtype=np.float64),
+    }
+
+
 def print_info(pairwise_comparisons, subject: str) -> None:
     """Print information about the Dice Coefficient scores."""
     logger.info("Subject                : %s", subject)
@@ -137,6 +149,13 @@ def print_info(pairwise_comparisons, subject: str) -> None:
     logger.info(
         "Std    Dice Coefficient: %.3e", np.std(pairwise_comparisons, dtype=np.float64)
     )
+
+
+def dump_stats(stats, cache_directory) -> None:
+    """Dump stats to file."""
+    stats_path: str = os.path.join(cache_directory, "stats.json")
+    with open(stats_path, "w") as f:
+        json.dump(stats, f, indent=2)
 
 
 def parse_args() -> Namespace:
@@ -180,13 +199,19 @@ def main() -> None:
         with open(args.subjects_file, "r") as f:
             args.subjects = f.read().splitlines()
 
-    for subject in args.subjects:
+    subjects: list[str] = args.subjects
+    stats: dict[str, dict[str, float]] = {}
+
+    for subject in subjects:
         logger.debug("Process subject: %s", subject)
         file_paths: list[str] = get_tarfiles(args.directory, subject)
         dice_scores: NDArray[Any] | None = process_subject(
             file_paths, args.cache_directory, args.filename, args.show_labels
         )
-        print_info(dice_scores, subject)
+        stats[subject] = compute_stats(dice_scores)
+        print_info(stats[subject], subject)
+
+    dump_stats(stats, args.cache_directory)
 
 
 if __name__ == "__main__":

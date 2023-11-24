@@ -13,7 +13,7 @@ import numpy as np
 from joblib import Memory
 from nibabel.freesurfer.mghformat import MGHImage
 from nibabel.nifti1 import Nifti1Image
-from nibabel.spatialimages import FileBasedImage
+from nibabel.filebasedimages import FileBasedImage
 from numpy.typing import NDArray
 
 logger: logging.Logger = logging.getLogger("QC")

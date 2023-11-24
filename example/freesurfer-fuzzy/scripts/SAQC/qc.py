@@ -127,12 +127,12 @@ def get_tarfiles(directory, subject) -> list[str]:
 
 def print_info(pairwise_comparisons) -> None:
     """Print information about the Dice Coefficient scores."""
-    logger.info("Mean Dice Coefficient:   %.3e", np.mean(pairwise_comparisons))
+    logger.info("Mean   Dice Coefficient: %.3e", np.mean(pairwise_comparisons))
     logger.info("Median Dice Coefficient: %.3e", np.median(pairwise_comparisons))
-    logger.info("Min Dice Coefficient:    %.3e", np.min(pairwise_comparisons))
-    logger.info("Max Dice Coefficient:    %.3e", np.max(pairwise_comparisons))
+    logger.info("Min    Dice Coefficient: %.3e", np.min(pairwise_comparisons))
+    logger.info("Max    Dice Coefficient: %.3e", np.max(pairwise_comparisons))
     logger.info(
-        "Std Dice Coefficient:    %.3e", np.std(pairwise_comparisons, dtype=np.float64)
+        "Std    Dice Coefficient: %.3e", np.std(pairwise_comparisons, dtype=np.float64)
     )
 
 

@@ -40,11 +40,18 @@ def dice_coefficient(segmentation1: NImage, segmentation2: NImage) -> float:
     """Compute Dice Coefficient, a measure of overlap between two segmentations."""
 
     logger.debug("Compute Dice Coefficient for two segmentations.")
-    logger.debug("Segmentation 1 shape: %s", segmentation1.get_filename())
-    logger.debug("Segmentation 2 shape: %s", segmentation2.get_filename())
 
     segmentation1_data = segmentation1.get_fdata()
     segmentation2_data = segmentation2.get_fdata()
+
+    logger.debug("Segmentation 1: %s", segmentation1.get_filename())
+    logger.debug(" - shape: %s", segmentation1.shape)
+    logger.debug(" - affine: %s", segmentation1.affine)
+    logger.debug(" - labels: %s", np.unique(segmentation1_data))
+    logger.debug("Segmentation 2: %s", segmentation2.get_filename())
+    logger.debug(" - shape: %s", segmentation2.shape)
+    logger.debug(" - affine: %s", segmentation2.affine)
+    logger.debug(" - labels: %s", np.unique(segmentation2_data))
 
     if segmentation1_data.shape != segmentation2_data.shape:
         raise ValueError(

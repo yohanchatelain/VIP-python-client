@@ -241,7 +241,7 @@ def main() -> None:
     subjects: list[str] = args.subjects
     stats: dict[str, dict[str, np.float64]] = {}
 
-    results = Parallel(n_jobs=args.n_jobs, return_as="generator_unordered")(
+    results = Parallel(n_jobs=args.n_jobs, return_as="generator")(
         delayed(process_single_subject)(subject, args) for subject in subjects
     )
 

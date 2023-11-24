@@ -215,10 +215,9 @@ def process_single_subject(subject, args):
     subject_stats: dict[str, np.float64] = compute_stats(dice_scores)
 
     # Accumulate information to be printed
-    subject_info = print_info(
+    print_info(
         subject_stats, subject, collect_output
     )  # Assume this function formats the info
-    collect_output.append(subject_info)
 
     return (
         subject,

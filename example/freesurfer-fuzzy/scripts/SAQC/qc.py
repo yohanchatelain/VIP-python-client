@@ -1,62 +1,115 @@
+import argparse
+import glob
+import itertools
+import logging
+import os
+import tarfile
+import tempfile
+from argparse import Namespace
+from typing import Any, Literal
+
 import nibabel as nib
 import numpy as np
-import itertools
-import glob
-import argparse
-import os
-import logging
-from nibabel.filebasedimages import FileBasedImage
+from joblib import Memory
+from nibabel.freesurfer.mghformat import MGHImage
+from nibabel.nifti1 import Nifti1Image
+from nibabel.spatialimages import FileBasedImage
+from numpy.typing import NDArray
 
-logger = logging.getLogger("QC")
+logger: logging.Logger = logging.getLogger("QC")
 logging.basicConfig(level=logging.INFO)
 
 
-def load_mgz_file(file_path):
+NImage = Nifti1Image | MGHImage
+
+
+def load_mgz_file(file_path: str) -> NImage | None:
     try:
         logger.debug("Load file: %s", file_path)
-        return nib.load(file_path)
+        img: FileBasedImage = nib.load(file_path)
+        if isinstance(img, NImage):
+            return img
+        else:
+            return None
     except Exception as e:
         logger.error(f"Error loading file {file_path}: {e}")
         return None
 
 
-def dice_coefficient(segmentation1: FileBasedImage, segmentation2: FileBasedImage):
+def dice_coefficient(segmentation1: NImage, segmentation2: NImage) -> float:
     """Compute Dice Coefficient, a measure of overlap between two segmentations."""
 
     logger.debug("Compute Dice Coefficient for two segmentations.")
-    logger.debug("Segmentation 1 shape: %s", segmentation1.filename)
-    logger.debug("Segmentation 2 shape: %s", segmentation2.filename)
+    logger.debug("Segmentation 1 shape: %s", segmentation1.get_filename())
+    logger.debug("Segmentation 2 shape: %s", segmentation2.get_filename())
 
-    if segmentation1.shape != segmentation2.shape:
+    segmentation1_data = segmentation1.get_fdata()
+    segmentation2_data = segmentation2.get_fdata()
+
+    if segmentation1_data.shape != segmentation2_data.shape:
         raise ValueError(
             "Shape mismatch: segmentation1 and segmentation2 must have the same shape."
         )
 
-    intersection = np.equal(segmentation1, segmentation2)
-    return 2.0 * intersection.sum() / (segmentation1.sum() + segmentation2.sum())
+    intersection = np.equal(segmentation1_data, segmentation2_data)
+    return (
+        2.0 * intersection.sum() / (segmentation1_data.sum() + segmentation2_data.sum())
+    )
 
 
-def compare_multiple_segmentations(file_paths):
-    segmentations = [load_mgz_file(file_path) for file_path in file_paths]
+def compare_multiple_segmentations(
+    file_paths,
+) -> NDArray[Any] | Literal["Error in loading files"]:
+    segmentations: list[NImage | None] = [
+        load_mgz_file(file_path) for file_path in file_paths
+    ]
     if any(seg is None for seg in segmentations):
         return "Error in loading files"
 
     pairwise_comparisons = {}
     for (i, seg1), (j, seg2) in itertools.combinations(enumerate(segmentations), 2):
-        dice_score = dice_coefficient(seg1, seg2)
-        pairwise_comparisons[(i, j)] = dice_score
+        if seg1 is not None and seg2 is not None:
+            dice_score: float = dice_coefficient(seg1, seg2)
+            pairwise_comparisons[(i, j)] = dice_score
 
     return np.array(list(pairwise_comparisons.values()))
 
 
-def get_segmentations_file_paths(directory, subject, filename):
-    """Get file paths for all segmentation files in a directory."""
-    regexp = os.path.join(directory, "**", subject, "**", filename)
-    logger.debug("Search path for segmentation files: %s", regexp)
+# Main function to process the subject data
+def process_subject(tar_subjects, cache_directory, filename) -> NDArray[Any] | None:
+    memory = Memory(cache_directory, verbose=0)
+    cached_comparison = memory.cache(compare_multiple_segmentations)
+
+    mgz_files = []
+    with tempfile.TemporaryDirectory() as temp_dir:
+        for tar_subject in tar_subjects:
+            subject: str = os.path.basename(tar_subject).split(".")[0]
+            repetition: str = os.path.basename(os.path.dirname(tar_subject))
+            archive_path: str = tar_subject
+            with tarfile.open(archive_path, "r:gz") as tar:
+                segmentation_path: str = f"{subject}/mri/{filename}"
+                new_segmentation_path: str = f"{repetition}_{filename}"
+                tar.extract(segmentation_path, path=temp_dir)
+                src: str = os.path.join(temp_dir, segmentation_path)
+                dst: str = os.path.join(temp_dir, new_segmentation_path)
+                os.rename(src, dst)
+
+            mgz_files.append(dst)
+
+        # Compare segmentations and cache the result
+        comparison_results = cached_comparison(mgz_files)
+
+        return comparison_results
+
+
+def get_tarfiles(directory, subject) -> list[str]:
+    """Get tarfile paths for all repetitions in a directory given a subject."""
+    regexp: str = os.path.join(directory, "rep*", f"{subject}.tgz")
+    logger.debug("Search path for tar files: %s", regexp)
     return glob.glob(regexp, recursive=True)
 
 
-def print_info(pairwise_comparisons):
+def print_info(pairwise_comparisons) -> None:
     """Print information about the Dice Coefficient scores."""
     logger.info("Mean Dice Coefficient: %s", np.mean(pairwise_comparisons))
     logger.info("Median Dice Coefficient: %s", np.median(pairwise_comparisons))
@@ -64,7 +117,7 @@ def print_info(pairwise_comparisons):
     logger.info("Max Dice Coefficient: %s", np.max(pairwise_comparisons))
 
 
-def parse_args():
+def parse_args() -> Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(
         description="Compare segmentations using Dice Coefficient."
@@ -76,21 +129,28 @@ def parse_args():
     )
     parser.add_argument("--subject", type=str, help="Subject ID.")
     parser.add_argument(
-        "--filename", type=str, help="Filename of segmentation files to compare."
+        "--filename",
+        type=str,
+        default="aparc.a2009s+aseg.mgz",
+        help="Filename of segmentation files to compare.",
     )
     parser.add_argument("--verbose", action="store_true", help="Print verbose output.")
-    args = parser.parse_args()
+    parser.add_argument(
+        "--cache-directory", type=str, default="cache", help="Cache directory"
+    )
+    args: Namespace = parser.parse_args()
     return args
 
 
-def main():
-    args = parse_args()
+def main() -> None:
+    args: Namespace = parse_args()
     if args.verbose:
         logger.setLevel(logging.DEBUG)
-    file_paths = get_segmentations_file_paths(
-        args.directory, args.subject, args.filename
+    file_paths: list[str] = get_tarfiles(args.directory, args.subject)
+
+    dice_scores: NDArray[Any] | None = process_subject(
+        file_paths, args.cache_directory, args.filename
     )
-    dice_scores = compare_multiple_segmentations(file_paths)
     print_info(dice_scores)
 
 

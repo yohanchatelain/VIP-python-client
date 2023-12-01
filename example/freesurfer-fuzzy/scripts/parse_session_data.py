@@ -5,6 +5,8 @@ from datetime import datetime
 import plotly.graph_objects as go
 import plotly.express as px
 import numpy as np
+import scipy
+from plotly.subplots import make_subplots
 
 class Collect:
     '''
@@ -279,6 +281,41 @@ def plot_present_per_visit(collect_present):
     fig.update_layout(title="Number of visits with at least n repetitions", xaxis_title="n", yaxis_title="Number of visits")
     fig.show()
 
+def plot_heatmap_cnh():
+    '''
+    Use plotly to plot the function log(x)/log(y) for x in [0.5,1] and y in [0.5,1]
+    Plot contours for log(x)/log(y) = i, for i in 1...13
+    1/2 log2( (n-1) / chi2_{1-alpha/2} ) + log2( F^{-1}( (p+1) / 2) )
+    '''
+
+    sizes = [7,8,9,10]
+    
+    fig = make_subplots(cols=2, rows=2, subplot_titles=[f"n={n}" for n in sizes])
+
+    i = 1    
+
+    for n in sizes:
+
+        (row, col) = ((i+1)//2 , i%2 + 1)
+
+        alpha = np.linspace(0.5, 0.999, 100)
+        p = np.linspace(0.5, 0.999, 100)
+        
+        chi2 = scipy.stats.chi2.interval(1-alpha/2, n - 1)[0]
+        inorm = scipy.stats.norm.ppf((p + 1) / 2)
+        Z = 0.5 * np.log2((n - 1) / chi2) + np.log2(inorm)
+        
+        contour = go.Contour(z=Z, x=p, y=alpha, colorscale='Bluered')
+        fig.add_trace(contour, row=row, col=col)
+        fig.update_layout(title='delta', xaxis_title='p', yaxis_title='1-α')
+        fig.update_xaxes(gridcolor='black', griddash='dash', minor_griddash="dot")
+        fig.update_yaxes(gridcolor='black', griddash='dash', minor_griddash="dot")
+        fig.update_traces(line_width=2, selector=dict(type='contour'))
+
+        i += 1
+        
+    fig.show()
+
 def plot_heatmap():
     '''
     Use plotly to plot the function log(x)/log(y) for x in [0.5,1] and y in [0.5,1]
@@ -287,12 +324,27 @@ def plot_heatmap():
     
     alpha = np.linspace(0.5, 0.999, 100)
     p = np.linspace(0.5, 0.999, 100)
-    Z = np.log(1-alpha)/np.log(p) - 1
+    Z = np.log(1-alpha)/np.log(p)
     fig = go.Figure(data=[go.Contour(z=Z, x=p, y=alpha, contours=dict(start=1, end=13, size=1, showlabels=True), line_smoothing=0.01, contours_coloring='lines', colorscale='Bluered')])
     fig.update_layout(title='log(1-α)/log(p)', xaxis_title='p', yaxis_title='1-α')
     fig.update_xaxes(gridcolor='black', griddash='dash', minor_griddash="dot")
     fig.update_yaxes(gridcolor='black', griddash='dash', minor_griddash="dot")
     fig.update_traces(line_width=2, selector=dict(type='contour'))
+    fig.show()
+
+def plot_stats_from_nsamples(n):
+    '''
+    Use plotly to plot the function log(x)/log(y) for x in [0.5,1] and y in [0.5,1]
+    Plot function 0 = log(x)/log(y) - n <-> y = exp(log(x)/n)
+    '''
+    alpha = np.linspace(0.001, 0.5, 100)
+    fig = go.Figure()
+
+    for i in range(7, 14):
+        z = np.exp(np.log(alpha)/i)
+        fig.add_trace(go.Scatter(x=alpha, y=z, name=i))
+    
+    fig.update_layout(title=f'n=log(α)/log(p)', xaxis_title='α', yaxis_title='p')
     fig.show()
 
 def print_workflows(data, subjects: dict[str, str]):
@@ -349,6 +401,8 @@ def main():
     plot_missing_per_visit(collect_missing)
     plot_present_per_visit(collect_present)
     plot_heatmap()
-
+    plot_heatmap_cnh()
+    plot_stats_from_nsamples(10)
+    
 if '__main__' == __name__:
     main()

@@ -10,13 +10,23 @@ simplefilter(action="ignore", category=DeprecationWarning)
 # ROI to excludes
 # cortical: BrainSegVolNotVent, eTIV
 # subcortical: any ROI not starting with Left- or Right-
-def filter_roi(df, region):
+def filter_roi(df, region, measure):
     if region == "cortical":
         df["ROI"] = df["ROI"][~df["ROI"].isin(["BrainSegVolNotVent", "eTIV"])]
     if region == "subcortical":
         df["ROI"] = df["ROI"][
             df["ROI"].str.startswith("Left-") | df["ROI"].str.startswith("Right-")
         ]
+
+    if measure == "area":
+        df["ROI"] = df["ROI"][~df["ROI"].isin(["WhiteSurfArea_area"])]
+    elif measure == "thickness":
+        df["ROI"] = df["ROI"][~df["ROI"].isin(["BrainSegVolNotVent", "eTIV"])]
+    elif measure == "volume":
+        df["ROI"] = df["ROI"][~df["ROI"].isin(["BrainSegVolNotVent", "eTIV"])]
+    elif measure == "subcortical-volume":
+        df["ROI"] = df["ROI"][~df["ROI"].isin(["BrainSegVol", "CerebralWhiteMatterVol", "CortexVol", "eTIV", "EstimatedTotalIntraCranialVol", "MaskVol","SupraTentorialVol", "SupraTentorialVolNotVent", "TotalGrayVol", "lhCerebralWhiteMatterVol", "lhCortexVol", "rhCerebralWhiteMatterVol", "rhCortexVol", "Brain-Stem", "Left-Cerebrellum-Cortex", "Left-Lateral-Ventricle", "Right-Cerebrellum-Cortex", "Right-Lateral-Ventricle", "Right-Cerebrellum-White-Matter", "Right-Lateral-Ventricle", "SubCortGrayVol"])]
+        
     return df
 
 
@@ -136,7 +146,11 @@ def parse_args():
         choices=["cortical", "subcortical"],
         help="Region to plot",
     )
+    parser.add_argument("--measure", required=True, 
+                        choices=["area","thickness", "volume","subcortical-volume"], 
+                        help="Measure to plot")
     args = parser.parse_args()
+    print(args)
     return args
 
 
@@ -153,7 +167,7 @@ def main():
         print("No filenames provided")
         sys.exit(0)
 
-    df = filter_roi(df, args.region)
+    df = filter_roi(df, args.region, args.measure)
 
     if args.analysis_level == "subject":
         color = "hemi" if "hemi" in df.columns else None

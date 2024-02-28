@@ -88,9 +88,9 @@ def generate_input_settings(input_data):
     PATNO_id = input_data["PATNO_id"].keys()
 
     for patno in PATNO_id:
-        subject, visit = input_data["PATNO_id"][patno].split("_")
+        subject_visit = input_data["PATNO_id"][patno]
         filename = replace_root_path(input_data["File name"][patno])
-        subject_ids.append(subject)
+        subject_ids.append(subject_visit)
         nifti_files.append(filename)
 
     settings = {

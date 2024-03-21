@@ -43,6 +43,7 @@ def load_and_save_entropy(subject, input_dir, output_dir):
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--subject", default=None, type=str, help="Subject to process")
     parser.add_argument("--input", default=input_json, type=str, help="Input json file")
     parser.add_argument(
         "--input-dir", default=input_entropy_dir, type=str, help="Input directory"
@@ -59,7 +60,12 @@ def parse_args():
 def main():
 
     args = parse_args()
-    dataset = get_dataset(args.input)
+
+    if args.subject:
+        subjects = [args.subject]
+    else:
+        dataset = get_dataset(args.input)
+        subjects = list(dataset["PATNO_id"].values())
 
     os.makedirs(args.output_dir, exist_ok=True)
 
@@ -68,7 +74,7 @@ def main():
             joblib.delayed(load_and_save_entropy)(
                 subject, args.input_dir, args.output_dir
             )
-            for subject in tqdm.tqdm(dataset["PATNO_id"].values())
+            for subject in tqdm.tqdm(subjects)
         )
 
 

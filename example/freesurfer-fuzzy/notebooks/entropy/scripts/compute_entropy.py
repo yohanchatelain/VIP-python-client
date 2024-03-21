@@ -351,13 +351,11 @@ def main():
         output = command["output"]
         exist = os.path.exists(os.path.dirname(command["output"]))
 
-        print(os.path.dirname(command["output"]), exist)
-        if exist:
+        if exist and not args.force:
             print(f"Skip {regexp}")
         elif not os.path.exists(command["output"]) or args.force:
             if os.path.dirname(output) != "":
                 os.makedirs(os.path.dirname(output), exist_ok=True)
-            print(regexp)
             run_entropy(
                 iohandler,
                 regexp,

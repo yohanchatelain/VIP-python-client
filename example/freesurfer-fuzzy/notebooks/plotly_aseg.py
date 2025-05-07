@@ -142,17 +142,11 @@ def create_mesh_from_label(aseg_data, label_id, affine=None, step_size=1, smooth
         return None
 
 
-def intensity_to_rgb(intensity, colormap, normalize=True):
+def intensity_to_rgb(colormap, low=0, high=1):
     import plotly.colors as pc
 
     colorscale = pc.get_colorscale(colormap)
-    print(type(colorscale[0][-1]))
-    low = colorscale[0][-1]
-    high = colorscale[-1][-1]
-    print(f"Low: {low}, High: {high}")
-    inter = pc.find_intermediate_color(low, high, intensity, colortype="rgb")
-    print(f"Intensity: {intensity}, Color: {inter}")
-    return inter
+    return pc.sample_colorscale(colorscale, 101, low=low, high=high)
 
 
 def visualize_aseg(
@@ -178,22 +172,28 @@ def visualize_aseg(
 
     labels_to_show = aseg_stats["SegId"].tolist()
     default_labels = get_default_labels()
+    labels_name = [get_label_name(aseg_stats, label) for label in labels_to_show]
+    labels_name = [label for label in labels_name if label in default_labels]
 
     # Create a figure
     fig = make_subplots(rows=1, cols=1, specs=[[{"type": "surface"}]])
 
     if aseg_rna is not None:
-        min_norm = aseg_rna["r"].min()
-        max_norm = aseg_rna["r"].max()
+        if "ROI" in aseg_rna.columns:
+            valid_labels = set(labels_name).intersection(set(aseg_rna["ROI"]))
+            min_norm = aseg_rna[aseg_rna.ROI.isin(valid_labels)]["r"].min()
+            max_norm = aseg_rna[aseg_rna.ROI.isin(valid_labels)]["r"].max()
+        else:
+            raise KeyError("Column 'ROI' not found in aseg_rna DataFrame.")
     else:
         min_norm = aseg_stats["normMin"].min()
         max_norm = aseg_stats["normMax"].max()
 
-    labels = [label for label in labels_to_show if label in default_labels]
-    
+    max_norm = max(max_norm, 0.5)
+    print(f"Min norm: {min_norm}, Max norm: {max_norm}")
 
     # Get color for this label
-    color_rgb = intensity_to_rgb(labels, cmap)
+    colorscale_rgb = intensity_to_rgb(cmap)
 
     # For each label, create a mesh and add to the figure
     for label_id in labels_to_show:
@@ -225,9 +225,13 @@ def visualize_aseg(
                 ratio = 0
                 continue
             ratio = aseg_rna[aseg_rna["ROI"] == label_name]["r"].values[0]
-            stat_normalized = (ratio - min_norm) / (max_norm - min_norm)
             stat = ratio
+            stat_normalized = (stat - min_norm) / (max_norm - min_norm)
+            color_rgb = colorscale_rgb[int(stat_normalized * 100)]
 
+        print(
+            f"Label {label_name} - Stat: {stat:.2f}, Normalized: {stat_normalized:.2f}"
+        )
 
         # Add mesh to figure
         fig.add_trace(
